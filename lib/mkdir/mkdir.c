@@ -11,10 +11,10 @@ int mymkdir(int argc, char * argv[])
     // Déclaration variable pour arguments
 
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "lh" ; // Les options disponibles
+    char * options = "hm" ; // Les options disponibles
 
     int help = 0; // -h
-    //short int m = 777; // -m spécifier le mode
+    short int m = 777; // -m spécifier le mode
 
     char * path = NULL; // Stock le chemin demandé
     mode_t mode = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // Stock le masque (droits donnés aux répertoires)

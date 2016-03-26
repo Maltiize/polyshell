@@ -18,8 +18,9 @@ Suggestion amélioration:
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
-#include <string.h>
-#include <getopt.h> // Pour les arguments longs
+#include <limits.h>
+
+#include <getopt.h>
 
 
 
@@ -197,23 +198,25 @@ int ls(int argc, char *argv[])
 
 
     // Récupérer le répertoire
-    int i = 1;
-    for (i; i<argc ;i++)
+    if (argc > 1)
     {
-        if(argv[i][0] != '-')
+        int i;
+        for (i=1; i<argc ;i++)
         {
-            if(path != NULL)
+            if(argv[i][0] != '-')
             {
-                printf("Vous ne pouvez spécifier qu'un unique chemin. Saisir -h pour obtenir de l'aide. \n");
-                return 1;
-            }
-            else
-            {
-                path = argv[i];
+                if(path != NULL)
+                {
+                    printf("Vous ne pouvez spécifier qu'un unique chemin. Saisir -h pour obtenir de l'aide. \n");
+                    return 1;
+                }
+                else
+                {
+                    path = argv[i];
+                }
             }
         }
     }
-
     // Mise par défaut à "./" si pas de spécifications de chemin.
 	if (path == NULL)
 		path = ".";

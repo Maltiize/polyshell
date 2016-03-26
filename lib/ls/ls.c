@@ -247,11 +247,7 @@ int ls(int argc, char *argv[])
 	{
         stat(dptr->d_name, &sb); // Obtenir des informations sur le fichier analysé
 
-        if (a==0 && dptr->d_name[0] == '.')
-        {
-            //Fichier caché sans -a
-        }
-        else
+        if (!(a==0 && dptr->d_name[0] == '.')) // Inverse de ( Si Option -a désactivé && fichier commençant par . )
         {
             if (l == 1) // si option -l activé
             {

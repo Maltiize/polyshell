@@ -3,8 +3,11 @@ Fonction LS
 Projet C - MiniShell - Polytech Nantes 2016
 
 Suggestion amélioration:
-- Un meilleur rendu graphique.
+- Ajustement graphique
+- Ajout d'options
 */
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -15,17 +18,10 @@ Suggestion amélioration:
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
+#include <limits.h>
 
-//#include <memory.h>
-#include <string.h>
-//#include <limits.h>
+#include <getopt.h>
 
-// Structure des arguments.
-struct options
-{
-    char nomShort; // pour les formes -h
-    char * nomLong;       // pour les formes --help
-};
 
 
 // Fonction qui traduit st_mode par le type du fichier analysé.
@@ -160,52 +156,120 @@ int ls(int argc, char *argv[])
 	struct stat sb; //fichier
     struct tm *tm;  //format time
 
-    // Mise par défaut à "./" si pas de spécifications de chemin.
-	if (argv[1] == NULL)
-		argv[1] = ".";
+    char opt; // Pour stocker les options passé en paramètre 1 à 1
+    char * options = "lh" ; // Les options disponibles
+    char * path = NULL; // Stock le chemin demandé
 
-    printf("Vous visitez le répertoire suivant: %s \n", argv[1]);
+    int help = 0; //option h
+    int l = 0; // option l
+
+
+    // Récupérer les options
+    while ((opt = getopt (argc, argv, options)) != -1)
+    {
+        switch(opt)
+        {
+            case '?':
+                printf("Un des paramètres n'est pas reconnu. Utiliser -h pour obtenir de l'aide. \n");
+                return 1;
+                break;
+            case 'h':
+                help = 1;
+                break;
+            case 'l':
+                l = 1;
+                break;
+            default:
+                printf("Une erreur est survenu lors de la saisie des paramètres. \n");
+                return 1;
+                break;
+        }
+    }
+
+    // Si -h
+    if (help == 1)
+    {
+        printf("Pour utiliser la fonction ls taper : ls [-options] [répertoires] \n");
+        printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
+        printf("\t -h : Affiche l'aide. \n");
+        printf("\t -l : Affiche les informations complètes sur les fichiers analysés. \n");
+        return 0;
+    }
+
+
+    // Récupérer le répertoire
+    if (argc > 1)
+    {
+        int i;
+        for (i=1; i<argc ;i++)
+        {
+            if(argv[i][0] != '-')
+            {
+                if(path != NULL)
+                {
+                    printf("Vous ne pouvez spécifier qu'un unique chemin. Saisir -h pour obtenir de l'aide. \n");
+                    return 1;
+                }
+                else
+                {
+                    path = argv[i];
+                }
+            }
+        }
+    }
+    // Mise par défaut à "./" si pas de spécifications de chemin.
+	if (path == NULL)
+		path = ".";
+
+    printf("Vous visitez le répertoire suivant: %s \n", path);
 
     //Définition Directory
 	DIR *dirp;
 	struct dirent *dptr;
 
     // Test l'ouverture du chemin et ouverture si OK, erreur sinon.
-	if ((dirp=opendir(argv[1])) == NULL)
+	if ((dirp=opendir(path)) == NULL)
 	{
 		printf("Erreur, impossible d'ouvrir le répertoire");
 		return 1;
 	}
 
+    if (l == 1) // si option -l activé
+        printf("%-14s %-3s %-5s %-5s %-22s %-21s %-19s %s \n","Droits","Liens", "User", "Grp", "Taille Blocks", "Dernière MaJ", "Nom","Type");
+
     //Pour chaque entrée du répertoire...
 	while(dptr=readdir(dirp))
 	{
-        lstat(dptr->d_name, &sb);
+
+        lstat(dptr->d_name, &sb); // Obtenir des informations sur le fichier analysé
+
+        if (l == 1) // si option -l activé
+        {
             // droits d'accés
-            printf( "%s \t", mode2Droits(sb));
+            printf( "%-14.12s \t", mode2Droits(sb));
 
             // Nombre de liens
-            printf("%ld ", (long) sb.st_nlink);
+            printf("%-3ld ", (long) sb.st_nlink);
 
             // ID User
-			printf("%ld ", (long) sb.st_uid);
+			printf("%-5.4ld ", (long) sb.st_uid);
 
             // ID Group
-            printf("%ld ", (long) sb.st_gid);
+            printf("%-5.4ld ", (long) sb.st_gid);
 
             // Block Size
-            printf("%ld \t", (long) sb.st_blksize);
+            printf("%-15ld \t", (long) sb.st_blksize);
 
             // Date dernière modif
             // NOTE : tm->tm_year renvoie l'heure à partir de l'an 1900. d'où +1900.
 			tm = localtime(&sb.st_mtime);
-			printf("%d %s %d %d:%d \n", tm->tm_mday, mois2String(tm->tm_mon), 1900+(tm->tm_year), tm->tm_hour, tm->tm_min);
-
+			printf("%-2.2d %-4.5s %-3.4d %-2.2d:%-5.2d", tm->tm_mday, mois2String(tm->tm_mon), 1900+(tm->tm_year), tm->tm_hour, tm->tm_min);
+        }
             // Nom de fichier
             printf("%-20.19s", dptr->d_name);
 
             // Type de Fichier
-            printf( "%-20.9s", mode2Type(sb));
+            printf( "%s \n", mode2Type(sb));
 	}
 	return 0;
 }
@@ -213,4 +277,5 @@ int ls(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     ls(argc, argv);
+    return 0;
 }

@@ -4,17 +4,19 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <getopt.h> // Pour les arguments longs
+#include <ctype.h> // isdigit ....
+
+#include <getopt.h> // Pour les arguments
 
 int mymkdir(int argc, char * argv[])
 {
     // Déclaration variable pour arguments
 
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "lh" ; // Les options disponibles
+    char * options = "hm" ; // Les options disponibles
 
     int help = 0; // -h
-    //short int m = 777; // -m spécifier le mode
+    short int m = 0; // -m spécifier le mode
 
     char * path = NULL; // Stock le chemin demandé
     mode_t mode = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // Stock le masque (droits donnés aux répertoires)
@@ -31,6 +33,9 @@ int mymkdir(int argc, char * argv[])
             case 'h':
                 help = 1;
                 break;
+            case 'm':
+                m = 1;
+                break;
             default:
                 printf("ERREUR : Une erreur est survenu lors de la saisie des paramètres. \n");
                 return 1;
@@ -38,17 +43,17 @@ int mymkdir(int argc, char * argv[])
         }
     }
 
-        // Si -h
     if (help == 1)
+        // Si -h
     {
-        printf("Pour utiliser la fonction mkdir taper : mkdir [-options] [chemin/(Nom Du Nouveau Répertoire)] \n");
+        printf("Pour utiliser la fonction mkdir taper : mkdir [-options] [(Nom Du Nouveau Répertoire)] \n");
         printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
         printf("\t -h : Affiche l'aide. \n");
-        printf("\t  \n");
+        printf("\t -m [masque en octet] affecte des droits au dossier. Cette option évite d'avoir recours à un chdir \n");
         return 0;
     }
 
-    // Récupérer le répertoire
+    // Récupérer le répertoire et le mode
     if (argc > 1)
     {
         int i;
@@ -56,6 +61,20 @@ int mymkdir(int argc, char * argv[])
         {
             if(argv[i][0] != '-')
             {
+               /// TODO : Faire un appel de la lib CHMOD IMPLÉMENTER -m .
+            /*
+                if (argv[i-1] == "-m")
+                {
+                    if (isdigit(argv[i]))
+                    {
+
+                    }
+                    else
+                    {
+                        printf("ERREUR : -m doit être suivis d'un nombre. Exemple : mkdir newDossier -m 777 \n Saisir mkdir -h pour obtenir de l'aide. \n");
+                    }
+                }
+            */
                 if(path != NULL)
                 {
                     printf("ERREUR : Vous ne pouvez spécifier qu'un unique chemin. Saisir mkdir -h pour obtenir de l'aide. \n");

@@ -157,11 +157,12 @@ int ls(int argc, char *argv[])
     struct tm *tm;  //format time
 
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "lh" ; // Les options disponibles
+    char * options = "lha" ; // Les options disponibles
     char * path = NULL; // Stock le chemin demandé
 
-    int help = 0; //option h
-    int l = 0; // option l
+    int help = 0; //option help -h
+    int l = 0; // option mode complet -l
+    int a = 0; // option fichiers cachés -a
 
 
     // Récupérer les options
@@ -170,7 +171,7 @@ int ls(int argc, char *argv[])
         switch(opt)
         {
             case '?':
-                printf("Un des paramètres n'est pas reconnu. Utiliser -h pour obtenir de l'aide. \n");
+                printf("ERREUR : Un des paramètres n'est pas reconnu. Utiliser -h pour obtenir de l'aide. \n");
                 return 1;
                 break;
             case 'h':
@@ -179,8 +180,11 @@ int ls(int argc, char *argv[])
             case 'l':
                 l = 1;
                 break;
+            case 'a':
+                a = 1;
+                break;
             default:
-                printf("Une erreur est survenu lors de la saisie des paramètres. \n");
+                printf("ERREUR : Une erreur est survenu lors de la saisie des paramètres. \n");
                 return 1;
                 break;
         }
@@ -193,6 +197,7 @@ int ls(int argc, char *argv[])
         printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
         printf("\t -h : Affiche l'aide. \n");
         printf("\t -l : Affiche les informations complètes sur les fichiers analysés. \n");
+        printf("\t -a : Affiche les fichiers cachés. \n");
         return 0;
     }
 
@@ -207,7 +212,7 @@ int ls(int argc, char *argv[])
             {
                 if(path != NULL)
                 {
-                    printf("Vous ne pouvez spécifier qu'un unique chemin. Saisir -h pour obtenir de l'aide. \n");
+                    printf("ERREUR : Vous ne pouvez spécifier qu'un unique chemin. Saisir -h pour obtenir de l'aide. \n");
                     return 1;
                 }
                 else
@@ -240,36 +245,38 @@ int ls(int argc, char *argv[])
     //Pour chaque entrée du répertoire...
 	while(dptr=readdir(dirp))
 	{
+        stat(dptr->d_name, &sb); // Obtenir des informations sur le fichier analysé
 
-        lstat(dptr->d_name, &sb); // Obtenir des informations sur le fichier analysé
-
-        if (l == 1) // si option -l activé
+        if (!(a==0 && dptr->d_name[0] == '.')) // Inverse de ( Si Option -a désactivé && fichier commençant par . )
         {
-            // droits d'accés
-            printf( "%-14.12s \t", mode2Droits(sb));
+            if (l == 1) // si option -l activé
+            {
+                // droits d'accés
+                printf( "%-14.12s \t", mode2Droits(sb));
 
-            // Nombre de liens
-            printf("%-3ld ", (long) sb.st_nlink);
+                // Nombre de liens
+                printf("%-3ld ", (long) sb.st_nlink);
 
-            // ID User
-			printf("%-5.4ld ", (long) sb.st_uid);
+                // ID User
+                printf("%-5.4ld ", (long) sb.st_uid);
 
-            // ID Group
-            printf("%-5.4ld ", (long) sb.st_gid);
+                // ID Group
+                printf("%-5.4ld ", (long) sb.st_gid);
 
-            // Block Size
-            printf("%-15ld \t", (long) sb.st_blksize);
+                // Block Size
+                printf("%-15ld \t", (long) sb.st_blksize);
 
-            // Date dernière modif
-            // NOTE : tm->tm_year renvoie l'heure à partir de l'an 1900. d'où +1900.
-			tm = localtime(&sb.st_mtime);
-			printf("%-2.2d %-4.5s %-3.4d %-2.2d:%-5.2d", tm->tm_mday, mois2String(tm->tm_mon), 1900+(tm->tm_year), tm->tm_hour, tm->tm_min);
+                // Date dernière modif
+                // NOTE : tm->tm_year renvoie l'heure à partir de l'an 1900. d'où +1900.
+                tm = localtime(&sb.st_mtime);
+                printf("%-2.2d %-4.5s %-3.4d %-2.2d:%-5.2d", tm->tm_mday, mois2String(tm->tm_mon), 1900+(tm->tm_year), tm->tm_hour, tm->tm_min);
+            }
+                // Nom de fichier
+                printf("%-20.19s", dptr->d_name);
+
+                // Type de Fichier
+                printf( "%s \n", mode2Type(sb));
         }
-            // Nom de fichier
-            printf("%-20.19s", dptr->d_name);
-
-            // Type de Fichier
-            printf( "%s \n", mode2Type(sb));
 	}
 	return 0;
 }

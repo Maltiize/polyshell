@@ -50,7 +50,7 @@ int cat(int argc, char * argv[])
         return 0;
     }
 
-  // Récupérer le répertoire
+  // Récupérer le PATH en argument
     if (argc > 1)
     {
         int i;

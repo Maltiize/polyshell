@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> // pour strchr()
+#include <string.h> // pour strchr() dans la fonction lire
+#include <getopt.h> // Pour les arguments
 
 int lire(char *chaine, int longueur)
 {
-    char *positionEntree = NULL;
+    char *posEntree = NULL;
     if (fgets(chaine, longueur, stdin) != NULL)  // Si il n'y a pas d'erreur dans la saisie alors
     {
-        positionEntree = strchr(chaine, '\n'); // On cherche avec strchr le \n
-        if (positionEntree != NULL) // On échange le \n par un \0 afin d'enlever le retour à la ligne
+        posEntree = strchr(chaine, '\n'); // On cherche avec strchr le \n
+        if (posEntree != NULL) // On échange le \n par un \0 afin d'enlever le retour à la ligne
         {
-            *positionEntree = '\0';
+            *posEntree = '\0';
         }
         return 1; // 1 :sans erreur
     }
@@ -24,11 +25,10 @@ int lire(char *chaine, int longueur)
 int echo(int argc, char *argv[])
 {
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "hnae" ; // Les options disponibles
+    char * options = "hne" ; // Les options disponibles
 
     int help = 0; //option h
     int n = 0; // option n : Enleve le retour chariot (ENTRÉE)
-    int a = 0; // option a : Laisse le retour chariot (ENTRÉE). En gros c'est le echo de base.
     int e = 0; //Prendre en compte le /n, le /t, et le /_ qui est une ligne de ___________ (délimitation de paragraphe
 
     // Récupérer les options
@@ -45,9 +45,6 @@ int echo(int argc, char *argv[])
                 break;
             case 'n':
                 n = 1;
-                break;
-            case 'a':
-                a = 1;
                 break;
             case 'e':
                 e = 1;
@@ -78,36 +75,39 @@ int echo(int argc, char *argv[])
     if (n == 1)     //sans retour chariot
     {
         lire(chaine, 1000);
-        printf("%s", chaine);
     }
 
-    if (a == 1) //retour chariot
+
+    else if (e == 1) //caractère autoriser
     {
-    fgets(chaine, sizeof chaine, stdin);
+        fgets(chaine, sizeof chaine, stdin);
+        int i=0;
+        while(chaine[i] != '\0')    //tant qu'on est pas au bout de la chaine on fais des if pour changer les caracteres
+        {
+            printf("%d",i);
+            if( (chaine[i] = "\\") && (chaine[i+1] == "t") )
+            {
+                chaine[i]=" _ _ _ _ _ _   ";
+            }
+            else if(chaine[i]=="\\_")
+            {
+                chaine[i]="\n______________________________\n";
+            }
+            else if(chaine[i]=="\\n")
+            {
+                chaine[i]="\n";
+            }
+            i++;
+        }
+    }
+
+    else
+    {
+        fgets(chaine, sizeof chaine, stdin);
+    }
+
     printf("%s", chaine);
-    }
 
-    if (e == 1) //caractère autoriser
-    {
-    fgets(chaine, sizeof chaine, stdin);
-    int i=0;
-    while(chaine[i] != '\0')    //tant qu'on est pas au bout de la chaine on fais des if pour changer les caractere
-    {
-        printf("%d",i);
-        if(chaine[i]+chaine[i+1] == '\\t'){
-            chaine[i]="     ";
-        }
-        else if(chaine[i]=='\\_'){
-            chaine[i]="\n______________________________\n";
-        }
-        else if(chaine[i]=='\\n'){
-        chaine[i]="\n";
-        }
-        i++;
-    }
-
-    printf("%s", chaine);
-    }
 }
 
 int main(int argc, char *argv[])

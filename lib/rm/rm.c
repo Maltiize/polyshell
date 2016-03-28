@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <getopt.h> // Pour les arguments
 
 
 int rm(int argc, char *argv[])
@@ -51,22 +53,25 @@ int rm(int argc, char *argv[])
 
     if (c == 1)	//confirmation
     {
-        printf("Souhaitez vous vraiment supprimer ce fichier ? Entrez 1 pour supprimer et 0 pour annuler.\n");
-		int yon = 0;
-		scanf("%s", yon);
+        printf("Souhaitez vous vraiment supprimer ce fichier ? Entrez oui pour supprimer et non pour annuler.\n");
+		char yon[10];
+        char valide[]="oui"
+		fgets(yon, 5, stdin);
+        printf("%s\n",yon );
 
-		if(yon == 1)					// JE COMPRENDS PAS POURQUOI LORSQUE JE MET 1 IL RENTRE PAS DEDANS ??? 
+		if(strcmp(yon,valide)==0)					// JE COMPRENDS PAS POURQUOI LORSQUE JE MET 1 IL RENTRE PAS DEDANS ???
 		{
-			printf("Vous avez selectionnez 1.\n");
+			printf("Vous avez selectionnez oui. Suppresion.\n");
     		for(int i=1;i<argc;i++)
 			{
     		    remove(argv[i]);
     		}
     		return 0;
 		}
-		else if(yon == 0)
+		else
 		{
-			printf("Vous avez selectionnez 0. Annulation de la suppression.\n");
+			printf("Vous avez selectionnez non. Annulation de la suppression.\n");
+            return 1;
 		}
     }
 

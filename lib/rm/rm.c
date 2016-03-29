@@ -9,11 +9,12 @@ int rm(int argc, char *argv[])
 
 	//Partie getopt
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "hcd" ; // Les options disponibles
+    char * options = "hc" ; // Les options disponibles
 
     int help = 0; //option h
     int c = 0; // option c : Demande une confirmation avant de supprimer, faire attention peut etre dangereux si on ne l'uilise pas.
-    int d = 0; // option d : Permet de supprimer un dossier. Faire attention peut etre dangereux.
+    //int d = 0; // option d : Permet de supprimer tout les fichiers d'un dossier. Faire attention peut etre dangereux.
+    //int n = 0; //suppression normal mais mis en arg pour pas tout le temps suppr c'est relou
 
 	// Récupérer les options
     while ((opt = getopt (argc, argv, options)) != -1)
@@ -30,9 +31,9 @@ int rm(int argc, char *argv[])
             case 'c':
                 c = 1;
                 break;
-            case 'd':
-                d = 1;
-                break;
+            //case 'd':
+              //  d = 1;
+                //break;
             default:
                 printf("Une erreur est survenu lors de la saisie des paramètres. \n");
                 return 1;
@@ -51,15 +52,15 @@ int rm(int argc, char *argv[])
         return 0;
     }
 
-    if (c == 1)	//confirmation
+    else if (c == 1)	//confirmation
     {
         printf("Souhaitez vous vraiment supprimer ce fichier ? Entrez oui pour supprimer et non pour annuler.\n");
 		char yon[10];
-        char valide[]="oui"
-		fgets(yon, 5, stdin);
-        printf("%s\n",yon );
+        char valide[]="oui\n";
+		fgets(yon, 10, stdin);
+        printf("[%s]\n",yon );
 
-		if(strcmp(yon,valide)==0)					// JE COMPRENDS PAS POURQUOI LORSQUE JE MET 1 IL RENTRE PAS DEDANS ???
+		if(strcmp(yon,valide)==0)
 		{
 			printf("Vous avez selectionnez oui. Suppresion.\n");
     		for(int i=1;i<argc;i++)
@@ -73,23 +74,21 @@ int rm(int argc, char *argv[])
 			printf("Vous avez selectionnez non. Annulation de la suppression.\n");
             return 1;
 		}
-    }
-
-
-
-	if (d == 1)	//suppression normal
-	{
-		//fonction de supp
+    }else{  //Sinon il n'y a pas d'option alors on suprime le fic
 		for(int i=1;i<argc;i++)
 		{
 		    remove(argv[i]);
 		}
+		printf("Suppresion effectué.\n");
 		return 0;
 	}
+
+	return 0;
 }
 
 
 int main(int argc, char *argv[])
 {
     rm(argc, argv);
+    return 0;
 }

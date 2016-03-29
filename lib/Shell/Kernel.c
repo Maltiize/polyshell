@@ -20,7 +20,7 @@ int parseCmd(char ** cmd);
 
 enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 
-enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFT,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
+enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFTERROR,REDIRECTIONLEFT,REDIRECTIONRIGHTERROR,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
 
 
 
@@ -125,9 +125,9 @@ enum Type getType2(char * partCmd){
     else if(strcmp(partCmd,"<")==0 || strcmp(partCmd,"<<")==0 )
         return REDIRECTIONLEFT;
     else if(strcmp(partCmd,"2>")==0)
-        return REDIRECTIONRIGHT;
+        return REDIRECTIONRIGHTERROR;
     else if(strcmp(partCmd,"<2")==0 )
-        return REDIRECTIONLEFT;
+        return REDIRECTIONLEFTERROR;
     else if(strcmp(partCmd,"|")==0 )
         return DOUBLECMD;
     else if(partCmd[0]==opt)
@@ -225,6 +225,7 @@ int parseCmd(char ** tokens)
                         return -1 ;
                     }
                     listCmd[nbCmd].name = *(tokens + i);
+                    listCmd[nbCmd].option = *(tokens + i);
                     nbCmd++;
                     st=CMDSTART ;
                     
@@ -236,8 +237,8 @@ int parseCmd(char ** tokens)
                         perror("ERROR OPTION MAL PLACEE");
                         return -1 ;
                     }
-                    strcat(listCmd[nbCmd-1].name," ");
-                    strcat(listCmd[nbCmd-1].name,*(tokens + i));
+                    strcat(listCmd[nbCmd-1].option," ");
+                    strcat(listCmd[nbCmd-1].option,*(tokens + i));
                     printf("%s \n",listCmd[nbCmd-1].name);
                     break;
                     
@@ -261,16 +262,40 @@ int parseCmd(char ** tokens)
                     listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
                     st=NEEDNOTCMDNEXT;
                     break;
+                
+                
+                case REDIRECTIONLEFTERROR :
+                    if(st!=CMDSTART ){
+                        perror("ERROR REDIRECTION MAL PLACEE");
+                        return -1 ;
+                    }
+                    
+                    listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
+                    st=NEEDNOTCMDNEXT;
+                    break;
+                    
+                case REDIRECTIONRIGHTERROR:
+                    if(st!=CMDSTART ){
+                        perror("ERROR REDIRECTION MAL PLACEE");
+                        return -1 ;
+                    }
+                    listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
+                    st=NEEDNOTCMDNEXT;
+                    break;
                     
                 case DOUBLECMD :
                     if(st!=CMDSTART ){
                         perror("ERROR CHAINAGE MAL PLACEE");
                         return -1 ;
                     }
-                    listCmd[nbCmd-1].nextCmd=*(listCmd[nbCmd]);
+                    listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                     break;
                     
                 case UNDEFINED :
+                    if(st!=CMDSTART && st != NEEDNOTCMDNEXT){
+                        perror("ERROR STRUCT CMD");
+                        return -1 ;
+                    }
                     printf("parseCmd : ERROR %s INCONNU ",*(tokens + i));
                     return 1;
             }

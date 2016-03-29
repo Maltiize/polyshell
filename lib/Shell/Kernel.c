@@ -297,19 +297,8 @@ int parseCmd(char ** tokens )
                         return -1 ;
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
-<<<<<<< HEAD
                     break;
-                    
-                case UNDEFINED :
-                    if(st!=CMDSTART && st != NEEDNOTCMDNEXT){
-                        perror("ERROR STRUCT CMD");
-                        return -1 ;
-                    }
-                    printf("parseCmd : ERROR %s INCONNU ",*(tokens + i));
-                    return 1;
-=======
-                    st = NEEDCMDNEXT;
-                    break;
+   
                     
                 case UNDEFINED :
                  if(st!=CMDSTART && st!= NEEDNOTCMDNEXT){
@@ -317,7 +306,6 @@ int parseCmd(char ** tokens )
                         return -1 ;
                     }
                 
->>>>>>> 84b1caffcfb4f733ab9c1ec63e9e7830fd250ee4
             }
 
             //if (getType(*(tokens + i))==0) printf("i'm in");

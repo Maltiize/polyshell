@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
+#define MAX_NAME_SZ 256
 
 
 typedef struct Function Function;
@@ -17,6 +18,8 @@ int lclFunction(char * cmd);
 int getStructFunct(char ** cmd);
 int getType(char * partCmd);
 int parseCmd(char ** cmd);
+void prompt(char *currentDir, char *hostName);
+void clear();
 
 enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 
@@ -61,12 +64,12 @@ Function getFunc(char * cmd){
 }
 
 int lclFunction(char * cmd){
-    if((strcmp(cmd,"grep") || strcmp(cmd,"ls") || strcmp(cmd,"ps") || strcmp(cmd,"find")))
+    if((strcmp(cmd,"grep") ==0 || strcmp(cmd,"ls")==0 || strcmp(cmd,"ps")==0 || strcmp(cmd,"find")==0))
         return 1;
     return 0;
 
 }
-
+/*
 void exect(Commande cmd ){
     Function f[10];
     int id =0;
@@ -74,12 +77,12 @@ void exect(Commande cmd ){
     
     f[0] = getFunc(cmd.name);
 
-    /*
+    
     while(cmd.nextCmd!=0){
         id++;
         f[id]=f[id-1].nextCmd
     }
-    */
+    
     if(!fork()){
         if(cmd.redirectionout!=NULL){
             file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
@@ -95,7 +98,7 @@ void exect(Commande cmd ){
     }
 
 }
-
+*/
 
 int getType(char * partCmd){
     char opt='-' ;
@@ -134,7 +137,7 @@ enum Type getType2(char * partCmd){
         return COMPLEMENTCMD;
 
     else{
-        if(lclFunction(partCmd))
+        if(lclFunction(partCmd)==1)
             return CMD ;
         else
             return UNDEFINED;
@@ -198,28 +201,33 @@ char** str_split(char* a_str, const char a_delim)
 // = pour atribuer des valeur à une variable
 
 
-int parseCmd(char ** tokens)
+int parseCmd(char ** tokens )
 {
     //int count =0 ;
     int i ;
     struct Commande listCmd[20];
     int nbCmd=0;
     enum State st = CMDSTART;
-    
- 
+    printf("ok\n");
     if (tokens)
     {
-        if(lclFunction(*(tokens))==0)
+        if(lclFunction(*(tokens))==0){
+            perror("ERROR CMD INCONNUE \n");
             return -1;
+
+        }
+
         listCmd[nbCmd].name = *(tokens);
+        nbCmd++;
         
-            
+
         for (i = 1; *(tokens + i); i++)
         {
+           printf("cmd is %s\n",*(tokens + i));
+
             switch (getType2(*(tokens + i))){
 
                 case CMD:
-                
                     if(st!=NEEDCMDNEXT){
                         perror("ERROR STRUCT DEUX NOM DE COMMANDE A LA SUITE");
                         return -1 ;
@@ -267,12 +275,16 @@ int parseCmd(char ** tokens)
                         perror("ERROR CHAINAGE MAL PLACEE");
                         return -1 ;
                     }
-                    listCmd[nbCmd-1].nextCmd=*(listCmd[nbCmd]);
+                    listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                    st = NEEDCMDNEXT;
                     break;
                     
                 case UNDEFINED :
-                    printf("parseCmd : ERROR %s INCONNU ",*(tokens + i));
-                    return 1;
+                 if(st!=CMDSTART && st!= NEEDNOTCMDNEXT){
+                        perror("ERROR STRUCT CMD ");
+                        return -1 ;
+                    }
+                
             }
 
             //if (getType(*(tokens + i))==0) printf("i'm in");
@@ -284,37 +296,79 @@ int parseCmd(char ** tokens)
     }
 
 
-    for (i = 1; *(tokens + i); i++){
-
-        //printf("subCMD=[%s] type %d\n", *(tokens + i),getType(*(tokens + i)));
-        free(*(tokens + i));
-
-
-    }
-
 
     free(tokens);
-    return 0;
+    return nbCmd;
 }
 
 
 int main (int argc, char ** argv){
 
     char** tokens;
-    int i;
+    char currentDir[100] ;
+    char hostName[100] ;
+    char *name = malloc (MAX_NAME_SZ);
+     if (name == NULL) {
+            printf ("No memory\n");
+            return 1;
+        }
 
-    char * test = malloc(sizeof(char)*100);
-    printf("Bienvenue dans notre Shell \n");
-    printf("Veuillez entrer votre commande \n");
+    int i;
+    
+    char test[]="lmlm -opop | skjljl.txt ";
+	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
     while(1){
-        scanf("%s",test);
-        if(strcmp(test,"quit")==0)
-            break ;
+        prompt(currentDir,hostName);
+        /* Get the command, with size limit. */
+        fgets (name, MAX_NAME_SZ, stdin);
+        /* Remove trailing newline, if there. */
+        if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
+            name[strlen (name) - 1] = '\0';
         
-        tokens = str_split(test, ' ');
+        if(strcmp(name,"quit")==0)
+            break ;
+        if(strcmp(name,"clear")==0)
+            clear() ;
+        tokens= str_split(name, ' ');
         parseCmd(tokens);
     }
     printf("Have a wonderful day\n");
     return 0;
 
+}
+void clear(){
+  printf("\033c");
+}
+
+void prompt(char *currentDir, char *hostName){
+	// username@nameofthemachine:currentdirectory
+
+	getcwd(currentDir,sizeof(currentDir));
+	gethostname(hostName, sizeof(hostName));
+
+	// TEST : 
+	//currentDir = get_current_dir_name();
+	//getlogin_r(hostName, sizeof(hostName));
+	// getenv("NAME");
+	//getenv("PWD")
+	//get_current_dir_name()
+
+
+	// strcmp(currentDir,"") == *currentDir == NULL;
+	
+	if ((strcmp(currentDir,"") == 0) && (strcmp(hostName,"") == 0)){
+		printf("%s@bash:~$ ", getlogin());
+
+	}
+	else if (strcmp(currentDir,"") == 0){
+		printf("%s@%s:~$ ", getlogin(), hostName);
+
+	}
+	else if (strcmp(hostName,"") == 0){
+		printf("%s@bash:%s$ ", getlogin(), currentDir);	
+	}
+	else {
+		printf("%s@%s:%s$ ", getlogin(), hostName, currentDir);
+	}
+	fflush(stdout);
 }

@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+
+typedef struct Function Function;
+typedef struct Commande Commande;
 
 
 
@@ -10,11 +16,11 @@ char** str_split(char* a_str, const char a_delim);
 int lclFunction(char * cmd);
 int getStructFunct(char ** cmd);
 int getType(char * partCmd);
-int parseCmd(char * cmd);
+int parseCmd(char ** cmd);
 
 enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 
-enum Type{ERROR,CMD,COMPLEMENTCMD,REDIRECTIONLEFT,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
+enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFT,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
 
 
 
@@ -25,6 +31,7 @@ struct Commande {
     char * redirectionout;
     char * redirectionerror;
     char * redirectionkeyboard ;
+    int thread ;
     struct Commande * nextCmd;
 
 };
@@ -32,7 +39,7 @@ struct Commande {
 struct Function {
     char * name ;
     int (*pfunc)(int,char **);
-}
+};
 
 
 
@@ -46,7 +53,11 @@ Function getFunc(char * cmd){
         i++;
     if(strcmp(listeFu[i].name,cmd))
         return listeFu[i];
-    return NULL ;
+    Function ret ;
+    ret.name =NULL;
+    ret.pfunc=NULL ;
+    return ret ;
+    
 }
 
 int lclFunction(char * cmd){
@@ -60,22 +71,22 @@ void exect(Commande cmd ){
     Function f[10];
     int id =0;
     int file ;
+    
+    f[0] = getFunc(cmd.name);
 
-    f = getFunc(f.name);
-
-
-    while(f[id].nextCmd!=0){
+    /*
+    while(cmd.nextCmd!=0){
         id++;
         f[id]=f[id-1].nextCmd
     }
-
+    */
     if(!fork()){
-        if(f.redirectionout!=NULL){
-            file = open(f.redirectionout,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
+        if(cmd.redirectionout!=NULL){
+            file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
             dup2(file,1);
         }
-        if(f.redirectionerror!=NULL){
-            file = open(f.redirectionerror,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
+        if(cmd.redirectionerror!=NULL){
+            file = open(cmd.redirectionerror,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
             dup2(file,2);
         }
 
@@ -84,55 +95,6 @@ void exect(Commande cmd ){
     }
 
 }
-
-
-
-
-/*
-int getStructFunct(char ** cmd){
-    int tmp ,i ;
-    int count =0 ;
-    enum State state ;
-
-    if(lclFunction(cmd[0]))
-        state =  NOCMDSTART;
-    else{
-        state = CMDSTART ;
-        count ++ ;
-    }
-
-    for (i = 1; *(cmd + i); i++)
-    {
-        tmp = getType(*(cmd+i));
-        if(tmp == 1){
-            if(state==CMDSTART)
-               state = NEEDCMDNEXT ;
-            else
-                return -1 ;
-        }
-        if(tmp == 2){
-            if(state==NEEDNOTCMDNEXT || state == NEEDCMDNEXT)
-                return -1 ;
-            else
-                state = NEEDNOTCMDNEXT ;
-        }
-        if(tmp == 0){
-            if(state==NEEDNOTCMDNEXT)
-                return -1 ;
-            if(state==NEEDCMDNEXT){
-
-            }
-
-            }
-
-        }
-
-    }
-    return count ;
-
-
-}*/
-
 
 
 int getType(char * partCmd){
@@ -175,7 +137,7 @@ enum Type getType2(char * partCmd){
         if(lclFunction(partCmd))
             return CMD ;
         else
-            return ERROR;
+            return UNDEFINED;
     }
 
 
@@ -236,49 +198,81 @@ char** str_split(char* a_str, const char a_delim)
 // = pour atribuer des valeur à une variable
 
 
-int parseCmd(char * cmd)
+int parseCmd(char ** tokens)
 {
-    int count =0 ;
+    //int count =0 ;
+    int i ;
     struct Commande listCmd[20];
     int nbCmd=0;
-    while(*(cmd+count)){
-        count++;
-    }
-    char * test = malloc(sizeof(char)*count*2);
-    test = strdup(cmd);
-    char** tokens;
-    int i;
-
-
-    tokens = str_split(test, ' ');
+    enum State st = CMDSTART;
+    
+ 
     if (tokens)
     {
-        for (i = 0; *(tokens + i); i++)
+        if(lclFunction(*(tokens))==0)
+            return -1;
+        listCmd[nbCmd].name = *(tokens);
+        
+            
+        for (i = 1; *(tokens + i); i++)
         {
             switch (getType2(*(tokens + i))){
 
                 case CMD:
+                
+                    if(st!=NEEDCMDNEXT){
+                        perror("ERROR STRUCT DEUX NOM DE COMMANDE A LA SUITE");
+                        return -1 ;
+                    }
                     listCmd[nbCmd].name = *(tokens + i);
                     nbCmd++;
+                    st=CMDSTART ;
+                    
                     break;
+                    
                 case COMPLEMENTCMD:
+                
+                    if(st!=CMDSTART ){
+                        perror("ERROR OPTION MAL PLACEE");
+                        return -1 ;
+                    }
                     strcat(listCmd[nbCmd-1].name," ");
                     strcat(listCmd[nbCmd-1].name,*(tokens + i));
                     printf("%s \n",listCmd[nbCmd-1].name);
                     break;
+                    
+                    
+                    
                 case REDIRECTIONLEFT :
+                    if(st!=CMDSTART ){
+                        perror("ERROR REDIRECTION MAL PLACEE");
+                        return -1 ;
+                    }
+                    
                     listCmd[nbCmd-1].redirectionin=*(tokens + i+1);
-                    listCmd[nbCmd].redirectionout=listCmd[nbCmd-1].name;
+                    st=NEEDNOTCMDNEXT;
                     break;
+                    
                 case REDIRECTIONRIGHT :
+                    if(st!=CMDSTART ){
+                        perror("ERROR REDIRECTION MAL PLACEE");
+                        return -1 ;
+                    }
                     listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
-                    printf("test %s\n",listCmd[nbCmd-1].redirectionout);
-                    listCmd[nbCmd].redirectionin=listCmd[nbCmd-1].name;
+                    st=NEEDNOTCMDNEXT;
                     break;
+                    
                 case DOUBLECMD :
-                    listCmd[nbCmd-1].nextCmd=*(tokens + i+1);
+                    if(st!=CMDSTART ){
+                        perror("ERROR CHAINAGE MAL PLACEE");
+                        return -1 ;
+                    }
+                    listCmd[nbCmd-1].nextCmd=*(listCmd[nbCmd]);
                     break;
-
+                    
+                case UNDEFINED :
+                    printf("parseCmd : ERROR %s INCONNU ",*(tokens + i));
+                    return 1;
             }
 
             //if (getType(*(tokens + i))==0) printf("i'm in");
@@ -292,10 +286,7 @@ int parseCmd(char * cmd)
 
     for (i = 1; *(tokens + i); i++){
 
-        printf("subCMD=[%s] type %d\n", *(tokens + i),getType(*(tokens + i)));
-
-
-
+        //printf("subCMD=[%s] type %d\n", *(tokens + i),getType(*(tokens + i)));
         free(*(tokens + i));
 
 
@@ -306,22 +297,24 @@ int parseCmd(char * cmd)
     return 0;
 }
 
+
 int main (int argc, char ** argv){
 
+    char** tokens;
+    int i;
 
-    parseCmd("ls -tytghgh >> ps");
-/*
-    struct Commande c[2];
-    c[0].name="castor";
-    c[1].name="castor";
-    struct Commande c2;
-    c2.name="castoreee";
-    struct Commande *c3;
-    c3=&c2;
-    c[0].nextCmd=c3;
-    struct Commande *tmp=c[0].nextCmd;
-    printf((*tmp).name);
-    */
+    char * test = malloc(sizeof(char)*100);
+    printf("Bienvenue dans notre Shell \n");
+    printf("Veuillez entrer votre commande \n");
+    while(1){
+        scanf("%s",test);
+        if(strcmp(test,"quit")==0)
+            break ;
+        
+        tokens = str_split(test, ' ');
+        parseCmd(tokens);
+    }
+    printf("Have a wonderful day\n");
     return 0;
 
 }

@@ -17,7 +17,7 @@ char** str_split(char* a_str, const char a_delim);
 int lclFunction(char * cmd);
 int getStructFunct(char ** cmd);
 int getType(char * partCmd);
-int parseCmd(char ** cmd);
+Commande * parseCmd(char ** tokens ,int * retnbcmd);
 void prompt(char *currentDir, char *hostName);
 void clear();
 
@@ -201,11 +201,11 @@ char** str_split(char* a_str, const char a_delim)
 // = pour atribuer des valeur à une variable
 
 
-int parseCmd(char ** tokens )
+Commande * parseCmd(char ** tokens ,int * retnbcmd)
 {
     //int count =0 ;
+    Commande listCmd[20];
     int i ;
-    struct Commande listCmd[20];
     int nbCmd=0;
     enum State st = CMDSTART;
     printf("ok\n");
@@ -213,7 +213,7 @@ int parseCmd(char ** tokens )
     {
         if(lclFunction(*(tokens))==0){
             perror("ERROR CMD INCONNUE \n");
-            return -1;
+            return NULL;
 
         }
 
@@ -230,7 +230,7 @@ int parseCmd(char ** tokens )
                 case CMD:
                     if(st!=NEEDCMDNEXT){
                         perror("ERROR STRUCT DEUX NOM DE COMMANDE A LA SUITE");
-                        return -1 ;
+                        return NULL ;
                     }
                     listCmd[nbCmd].name = *(tokens + i);
                     listCmd[nbCmd].option = *(tokens + i);
@@ -243,7 +243,7 @@ int parseCmd(char ** tokens )
                 
                     if(st!=CMDSTART ){
                         perror("ERROR OPTION MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     strcat(listCmd[nbCmd-1].option," ");
                     strcat(listCmd[nbCmd-1].option,*(tokens + i));
@@ -255,7 +255,7 @@ int parseCmd(char ** tokens )
                 case REDIRECTIONLEFT :
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     
                     listCmd[nbCmd-1].redirectionin=*(tokens + i+1);
@@ -265,7 +265,7 @@ int parseCmd(char ** tokens )
                 case REDIRECTIONRIGHT :
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
                     st=NEEDNOTCMDNEXT;
@@ -275,7 +275,7 @@ int parseCmd(char ** tokens )
                 case REDIRECTIONLEFTERROR :
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     
                     listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
@@ -285,7 +285,7 @@ int parseCmd(char ** tokens )
                 case REDIRECTIONRIGHTERROR:
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
                     st=NEEDNOTCMDNEXT;
@@ -294,16 +294,17 @@ int parseCmd(char ** tokens )
                 case DOUBLECMD :
                     if(st!=CMDSTART ){
                         perror("ERROR CHAINAGE MAL PLACEE");
-                        return -1 ;
+                        return NULL ;
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                    st=NEEDCMDNEXT;
                     break;
    
                     
                 case UNDEFINED :
                  if(st!=CMDSTART && st!= NEEDNOTCMDNEXT){
                         perror("ERROR STRUCT CMD ");
-                        return -1 ;
+                        return NULL ;
                     }
                 
             }
@@ -319,7 +320,8 @@ int parseCmd(char ** tokens )
 
 
     free(tokens);
-    return nbCmd;
+    *retnbcmd=nbCmd;
+    return listCmd;
 }
 
 
@@ -329,14 +331,16 @@ int main (int argc, char ** argv){
     char currentDir[100] ;
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ);
+    int i ;
+    int nbcmd ;
+    Commande * cmd =NULL ;
+    
      if (name == NULL) {
             printf ("No memory\n");
             return 1;
         }
 
-    int i;
-    
-    char test[]="lmlm -opop | skjljl.txt ";
+
 	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
     while(1){
         prompt(currentDir,hostName);
@@ -351,7 +355,8 @@ int main (int argc, char ** argv){
         if(strcmp(name,"clear")==0)
             clear() ;
         tokens= str_split(name, ' ');
-        parseCmd(tokens);
+        cmd=parseCmd(tokens,&nbcmd);
+        
     }
     printf("Have a wonderful day\n");
     return 0;

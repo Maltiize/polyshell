@@ -5,22 +5,33 @@
  
 void fout(void)
 {
-    printf("j'aime le jambon");
+    printf("j'aime le jambon\n la cocaine \n les morses\n");
 }
 
 void fin()
 {
+    printf("n'importe quoi\n");
     char result[240];
-    fgets(result,240,stdin);
-    strcat(result," et les putes\n");
+    int c =0;
+    while (!feof(stdin)&& c<240)
+       {
+           
+           result[c]=fgetc(stdin);
+           c++;
+       }
+    /*fgets(result,240,stdin);
+    strcat(result," et les putes\n");*/
     printf(result);
 }
 
 
 
 int main( int argc, char ** argv )
+
   {
-   /* create the pipe */
+    FILE * fichier =NULL;
+    fichier=fopen("Kernel.c","r+");
+    /*create the pipe */
    int pfd[2];
    if (pipe(pfd) == -1)
      {
@@ -39,6 +50,7 @@ int main( int argc, char ** argv )
    if (pid == 0)
      {
        /* child */
+       sleep(2);
        close(pfd[1]); /* close the unused write side */
        dup2(pfd[0], 0); /* connect the read side with stdin */
        close(pfd[0]); /* close the read side */
@@ -53,7 +65,14 @@ int main( int argc, char ** argv )
        dup2(pfd[1], 1); /* connect the write side with stdout */
        close(pfd[1]); /* close the write side */
        /* execute the process (ls command) */
-       fout();
+       char results[800];
+       while (!feof(fichier))
+       {
+           putchar(fgetc(fichier));
+       }
+       //while(fgets(results,800,fichier)!=NULL)
+       //printf(results);
+       
        return 4;
      }
    return 0;

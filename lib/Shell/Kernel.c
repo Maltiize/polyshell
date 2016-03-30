@@ -49,24 +49,57 @@ struct Function {
     Func pfunc;
 };
 
+int bonjour(int argc,char ** argv){
+    printf("bonjour papa \n");
+    return 0 ;
+    
+}
 
+int auRevoir(int argc,char ** argv){
+    printf("au revoir papa \n");
+
+    return 0 ;
+
+}
+
+
+int aDemain(int argc,char ** argv){
+    printf("a demain papa \n");
+
+    return 0 ;
+
+}
 
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 0;
+int nbfunction = 3;
 
 
 void initialize(){
-    Func tab[MAX_NB_FUNC];
-    char name[MAX_NB_FUNC][MAX_NB_FUNC];
+    int nb =3;
+    int i ;
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain};
+    char * name[MAX_NAME_SZ];
+    name[0]="bonjour";
+    name[1]="auRevoir";
+    name[2]="aDemain";
+    
+    for(i=0;i<nb;i++){
+        //printf("test %s \n",name[i]);
+        listeFu[i].name=name[i];
+        listeFu[i].pfunc=tab[i];
+    }
 }
 
 
 Function getFunc(char * cmd){
-    int i =0 ;
-    while(strcmp(listeFu[i].name,cmd)==0 && i!=nbfunction )
-        i++;
-    if(strcmp(listeFu[i].name,cmd)==0)
-        return listeFu[i];
+    int i ;
+   for(i=0;i<nbfunction;i++){
+        //printf("get func %s%s\n",listeFu[i].name,cmd);
+        if(strcmp(listeFu[i].name,cmd)==0)
+            return listeFu[i];
+        
+    }
+   
     Function ret ;
     ret.name =NULL;
     ret.pfunc=NULL ;
@@ -75,7 +108,7 @@ Function getFunc(char * cmd){
 }
 
 int lclFunction(char * cmd){
-    return getFunc(cmd).name == NULL ;
+    return !(getFunc(cmd).name == NULL) ;
 
 }
 
@@ -84,6 +117,7 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
     int i;
     Function token ;
     for (i=0;i<nbCmd;i++){
+        //printf("%s",liCmd[i].name);
         token = getFunc(liCmd[i].name);
         if(token.name==NULL)
             return 1;
@@ -213,7 +247,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     int i ;
     int nbCmd=0;
     enum State st = CMDSTART;
-    printf("ok\n");
+    //printf("ok\n");
     if (tokens)
     {
         if(lclFunction(*(tokens))==0){
@@ -228,7 +262,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
 
         for (i = 1; *(tokens + i); i++)
         {
-           printf("cmd is %s\n",*(tokens + i));
+           //printf("cmd is %s\n",*(tokens + i));
 
             switch (getType2(*(tokens + i))){
 
@@ -342,7 +376,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
             //printf(listCmd[nbCmd].name);
             //printf("subCMD=[%s] type %d\n", *(tokens + i),getType2(*(tokens + i)));
         }
-        printf("\n");
+        //printf("\n");
     }
 
 
@@ -355,12 +389,15 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
 
 int main (int argc, char ** argv){
     
+    
     char** tokens;
     char currentDir[100] ;
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     Commande * cmd =NULL ;
+    
+    initialize();
     
      if (name == NULL) {
             printf ("No memory\n");
@@ -383,8 +420,12 @@ int main (int argc, char ** argv){
             clear() ;
         tokens= str_split(name, ' ');
         cmd=parseCmd(tokens,&nbcmd);
+        //printf("%s\n",cmd[0].name);
         if(fileListeFun(cmd,nbcmd)!=0)
             perror("CMD UNKNOWN IN THE MEMORY");
+        else
+            (*cmd[0].pfunc)(0,NULL);                /*Appel de la fonction*/
+
     }
     printf("Have a wonderful day\n");
     return 0;

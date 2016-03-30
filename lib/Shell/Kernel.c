@@ -5,10 +5,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #define MAX_NAME_SZ 256
+#define MAX_NB_FUNC 20
 
 
 typedef struct Function Function;
 typedef struct Commande Commande;
+typedef int (*Func)(int, char **);
 
 
 
@@ -20,6 +22,7 @@ int getType(char * partCmd);
 Commande * parseCmd(char ** tokens ,int * retnbcmd);
 void prompt(char *currentDir, char *hostName);
 void clear();
+void initialize();
 
 enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 
@@ -34,28 +37,35 @@ struct Commande {
     char * redirectionout;
     char * redirectionerror;
     char * redirectionkeyboard ;
-    int (*pfunc)(int,char **);
+    Func pfunc;
     int thread ;
+    char logic ;
     struct Commande * nextCmd;
 
 };
 
 struct Function {
     char * name ;
-    int (*pfunc)(int,char **);
+    Func pfunc;
 };
 
 
 
-Function listeFu[20];
+Function listeFu[MAX_NB_FUNC];
 int nbfunction = 0;
+
+
+void initialize(){
+    Func tab[MAX_NB_FUNC];
+    char name[MAX_NB_FUNC][MAX_NB_FUNC];
+}
 
 
 Function getFunc(char * cmd){
     int i =0 ;
-    while(strcmp(listeFu[i].name,cmd) && i!=nbfunction )
+    while(strcmp(listeFu[i].name,cmd)==0 && i!=nbfunction )
         i++;
-    if(strcmp(listeFu[i].name,cmd))
+    if(strcmp(listeFu[i].name,cmd)==0)
         return listeFu[i];
     Function ret ;
     ret.name =NULL;
@@ -65,18 +75,21 @@ Function getFunc(char * cmd){
 }
 
 int lclFunction(char * cmd){
-    if((strcmp(cmd,"grep") ==0 || strcmp(cmd,"ls")==0 || strcmp(cmd,"ps")==0 || strcmp(cmd,"find")==0))
-        return 1;
-    return 0;
+    return getFunc(cmd).name == NULL ;
 
 }
-void fileListeFun(Commande *  liCmd , int nbCmd){
+
+
+int  fileListeFun(Commande *  liCmd , int nbCmd){
     int i;
     Function token ;
     for (i=0;i<nbCmd;i++){
         token = getFunc(liCmd[i].name);
+        if(token.name==NULL)
+            return 1;
         liCmd[i].pfunc=token.pfunc;
     }
+    return 0 ;
     
 }
 
@@ -111,23 +124,6 @@ void exect(Commande cmd ){
 }
 */
 
-int getType(char * partCmd){
-    char opt='-' ;
-    if(strcmp(partCmd,"&")==0 || strcmp(partCmd,"&&")==0 || strcmp(partCmd,"|")==0 || strcmp(partCmd,"||")==0 )
-        return 1;
-    else if(strcmp(partCmd,">")==0 || strcmp(partCmd,">>")==0 || strcmp(partCmd,"<<")==0 || strcmp(partCmd,"<")==0 )
-        return 2;
-    else if (partCmd[0]==opt)
-        return -2 ;
-    else{
-        if(lclFunction(partCmd))
-            return 0 ;
-        else
-            return -1;
-    }
-
-
-}
 enum Type getType2(char * partCmd){
     char opt='-' ;
     if( strcmp(partCmd,"&")==0)
@@ -213,7 +209,7 @@ char** str_split(char* a_str, const char a_delim)
 Commande * parseCmd(char ** tokens ,int * retnbcmd)
 {
     //int count =0 ;
-    Commande listCmd[20];
+    Commande * listCmd = malloc(sizeof(Commande)*MAX_NB_FUNC);
     int i ;
     int nbCmd=0;
     enum State st = CMDSTART;
@@ -325,13 +321,26 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR STRUCT CMD ");
                         return NULL ;
                     }
+                    break;
+                case LOGIC :
+                    if(st!=CMDSTART){
+                        perror("ERROR UNEXCEPTED LOGIC ASSIGNEMENT ");
+                        return NULL ;
+                    }
+                if(strcmp(*(tokens + i),"&&")==0)
+                    listCmd[nbCmd-1].logic='&';
+                else
+                    listCmd[nbCmd-1].logic='|';
+
+
+                    break;
                 
             }
 
             //if (getType(*(tokens + i))==0) printf("i'm in");
 
             //printf(listCmd[nbCmd].name);
-            printf("subCMD=[%s] type %d\n", *(tokens + i),getType(*(tokens + i)));
+            //printf("subCMD=[%s] type %d\n", *(tokens + i),getType2(*(tokens + i)));
         }
         printf("\n");
     }
@@ -345,12 +354,11 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
 
 
 int main (int argc, char ** argv){
-
+    
     char** tokens;
     char currentDir[100] ;
     char hostName[100] ;
-    char *name = malloc (MAX_NAME_SZ);
-    int i ;
+    char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     Commande * cmd =NULL ;
     
@@ -375,14 +383,15 @@ int main (int argc, char ** argv){
             clear() ;
         tokens= str_split(name, ' ');
         cmd=parseCmd(tokens,&nbcmd);
-        
+        if(fileListeFun(cmd,nbcmd)!=0)
+            perror("CMD UNKNOWN IN THE MEMORY");
     }
     printf("Have a wonderful day\n");
     return 0;
 
 }
 void clear(){
-  printf("\033c");
+    system("cls");
 }
 
 void prompt(char *currentDir, char *hostName){

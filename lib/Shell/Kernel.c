@@ -40,6 +40,7 @@ struct Commande {
     Func pfunc;
     int thread ;
     char logic ;
+    int nboption;
     struct Commande * nextCmd;
 
 };
@@ -50,7 +51,12 @@ struct Function {
 };
 
 int bonjour(int argc,char ** argv){
-    printf("bonjour papa \n");
+    int i;
+    //printf("lol\n");
+    printf("bonjour");
+    for(i=1;i<argc;i++)
+        printf("%s",argv[i]);
+    printf("\n");
     return 0 ;
     
 }
@@ -116,31 +122,26 @@ int lclFunction(char * cmd){
 int  fileListeFun(Commande *  liCmd , int nbCmd){
     int i;
     Function token ;
+    //printf("%s \n",liCmd[0].name);
+
     for (i=0;i<nbCmd;i++){
-        //printf("%s",liCmd[i].name);
+        //printf("%d \n",nbCmd);
         token = getFunc(liCmd[i].name);
+        //printf("%d \n",nbCmd);
+
         if(token.name==NULL)
             return 1;
         liCmd[i].pfunc=token.pfunc;
     }
+    //printf("%d \n",nbCmd);
+
     return 0 ;
     
 }
 
-/*
-void exect(Commande cmd ){
-    Function f[10];
-    int id =0;
-    int file ;
-    
-    f[0] = getFunc(cmd.name);
 
-    
-    while(cmd.nextCmd!=0){
-        id++;
-        f[id]=f[id-1].nextCmd
-    }
-    
+void exect(Commande *cmd ){
+    /*
     if(!fork()){
         if(cmd.redirectionout!=NULL){
             file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
@@ -153,10 +154,10 @@ void exect(Commande cmd ){
 
         
 
-    }
+    }*/
 
 }
-*/
+
 
 enum Type getType2(char * partCmd){
     char opt='-' ;
@@ -247,6 +248,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     int i ;
     int nbCmd=0;
     enum State st = CMDSTART;
+    char * strTmp;
+    strTmp=strdup(" ");
     //printf("ok\n");
     if (tokens)
     {
@@ -257,6 +260,9 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         }
 
         listCmd[nbCmd].name = *(tokens);
+        listCmd[nbCmd].option = strdup(*(tokens));
+        listCmd[nbCmd].nboption=1;
+
         nbCmd++;
         
 
@@ -272,7 +278,11 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         return NULL ;
                     }
                     listCmd[nbCmd].name = *(tokens + i);
-                    listCmd[nbCmd].option = *(tokens + i);
+                    listCmd[nbCmd].option = strdup(*(tokens));
+                    listCmd[nbCmd].nboption=1;
+
+                    //printf("option %s \n",listCmd[nbCmd-1].option);
+
                     nbCmd++;
                     st=CMDSTART ;
                     
@@ -286,24 +296,27 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     strcat(listCmd[nbCmd-1].option," ");
                     strcat(listCmd[nbCmd-1].option,*(tokens + i));
-                    printf("%s \n",listCmd[nbCmd-1].name);
+                    listCmd[nbCmd-1].nboption++;
+
+                   // printf("option - %s \n",listCmd[nbCmd-1].option);
                     break;
                     
                     
                     
                 case REDIRECTIONLEFT :
+
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
                     }
-                    if (strcmp(*(tokens + i+1),"<")==0) listCmd[nbCmd-1].redirectionin=*(tokens + i+1);
-                    else{
-                        char * strTmp="$";
-                        strcat(strTmp,*(tokens + i+1));
-                        listCmd[nbCmd-1].redirectionin=strTmp;
-                    }
-                   
+                    if (strcmp(*(tokens + i),"<")==0) 
+                        strTmp=strdup("$");
+                    strcat(strTmp,*(tokens + i));
+
+                    listCmd[nbCmd-1].redirectionin=strTmp;
                     st=NEEDNOTCMDNEXT;
+                    strTmp=strdup(" ");
+
                     break;
                     
                 case REDIRECTIONRIGHT :
@@ -311,13 +324,13 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
                     }
-                    if (strcmp(*(tokens + i+1),">")==0) listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
-                    else{
-                        char * strTmp="$";
-                        strcat(strTmp,*(tokens + i+1));
-                        listCmd[nbCmd-1].redirectionout=strTmp;
-                    }
+                    if (strcmp(*(tokens + i),">")==0) 
+                        strTmp=strdup("$");
+                    strcat(strTmp,*(tokens+i));
+                    listCmd[nbCmd-1].redirectionin=strTmp;
                     st=NEEDNOTCMDNEXT;
+                    strTmp=strdup(" ");
+
                     break;
                 
                 
@@ -355,6 +368,12 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR STRUCT CMD ");
                         return NULL ;
                     }
+                    strcat(listCmd[nbCmd-1].option," ");
+                    strcat(listCmd[nbCmd-1].option,*(tokens + i));
+                    listCmd[nbCmd-1].nboption++;
+
+                    //printf("option u %s \n",listCmd[nbCmd-1].option);
+
                     break;
                 case LOGIC :
                     if(st!=CMDSTART){
@@ -376,7 +395,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
             //printf(listCmd[nbCmd].name);
             //printf("subCMD=[%s] type %d\n", *(tokens + i),getType2(*(tokens + i)));
         }
-        //printf("\n");
+        //printf("ok \n");
     }
 
 
@@ -391,6 +410,7 @@ int main (int argc, char ** argv){
     
     
     char** tokens;
+    char ** option; 
     char currentDir[100] ;
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
@@ -418,21 +438,37 @@ int main (int argc, char ** argv){
             break ;
         if(strcmp(name,"clear")==0)
             clear() ;
-        tokens= str_split(name, ' ');
-        cmd=parseCmd(tokens,&nbcmd);
-        //printf("%s\n",cmd[0].name);
-        if(fileListeFun(cmd,nbcmd)!=0)
-            perror("CMD UNKNOWN IN THE MEMORY");
-        else
-            (*cmd[0].pfunc)(0,NULL);                /*Appel de la fonction*/
+        else{
+            tokens= str_split(name, ' ');
+            cmd=parseCmd(tokens,&nbcmd);
+            
+            //printf("looool %s\n",cmd[0].option);
+            if(fileListeFun(cmd,nbcmd)!=0)
+                perror("CMD UNKNOWN IN THE MEMORY");
+            else{
+                option=str_split(cmd[0].option,' ');
+               // printf("kkkk %s\n",option[0]);
+                (*cmd[0].pfunc)(cmd[0].nboption,option);                /*Appel de la fonction*/
+
+            }
+            
+        }
+        
 
     }
-    printf("Have a wonderful day\n");
+    /*
+    FILE * fichier =NULL;
+    fichier=fopen("testpipe","r+");
+     while (!feof(fichier))
+       {
+           putchar(fgetc(fichier));
+       }
+    printf("Have a wonderful day\n");*/
     return 0;
 
 }
 void clear(){
-    system("cls");
+    system("clear");
 }
 
 void prompt(char *currentDir, char *hostName){

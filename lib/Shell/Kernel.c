@@ -262,8 +262,13 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
                     }
-                    
-                    listCmd[nbCmd-1].redirectionin=*(tokens + i+1);
+                    if (strcmp(*(tokens + i+1),"<")==0) listCmd[nbCmd-1].redirectionin=*(tokens + i+1);
+                    else{
+                        char * strTmp="$";
+                        strcat(strTmp,*(tokens + i+1));
+                        listCmd[nbCmd-1].redirectionin=strTmp;
+                    }
+                   
                     st=NEEDNOTCMDNEXT;
                     break;
                     
@@ -272,7 +277,12 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
                     }
-                    listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
+                    if (strcmp(*(tokens + i+1),">")==0) listCmd[nbCmd-1].redirectionout=*(tokens + i+1);
+                    else{
+                        char * strTmp="$";
+                        strcat(strTmp,*(tokens + i+1));
+                        listCmd[nbCmd-1].redirectionout=strTmp;
+                    }
                     st=NEEDNOTCMDNEXT;
                     break;
                 

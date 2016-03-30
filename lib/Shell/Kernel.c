@@ -4,8 +4,16 @@
 #include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+
+
+
 #define MAX_NAME_SZ 256
 #define MAX_NB_FUNC 20
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 0
+
 
 
 typedef struct Function Function;
@@ -140,21 +148,49 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
 }
 
 
-void exect(Commande *cmd ){
-    /*
-    if(!fork()){
-        if(cmd.redirectionout!=NULL){
-            file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
-            dup2(file,1);
+int exect(Commande *cmd ){
+    int file = -1;
+    char * tmp  ;  
+    int idxToDel = 0; 
+
+   
+    if(fork()==0){
+        if(cmd[0].redirectionout!=NULL){
+            if(cmd[0].redirectionout[0]!='$')
+                file = open(cmd[0].redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+                
+            else{
+                tmp=cmd[0].redirectionout;
+                memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
+                file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
+            }
+            dup2(file,STDOUT);
+
         }
-        if(cmd.redirectionerror!=NULL){
-            file = open(cmd.redirectionerror,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
-            dup2(file,2);
+        if(cmd[0].redirectionerror!=NULL){
+            if(cmd[0].redirectionerror[0]!='$')
+                file = open(cmd[0].redirectionerror,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+                
+            else{
+                tmp=cmd[0].redirectionerror;
+                memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
+                file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
+            }
+            dup2(file,STDERR);
+
         }
 
-        
+        char ** option=str_split(cmd[0].option,' ');
+        (*cmd[0].pfunc)(cmd[0].nboption,option);      
+        if(file!=-1)
+            close(file);
+        exit(0);
 
-    }*/
+    }
+    else
+        wait(NULL); // permet d'attendre la mort du fils
+
+    return 0;
 
 }
 
@@ -249,7 +285,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     int nbCmd=0;
     enum State st = CMDSTART;
     char * strTmp;
-    strTmp=strdup(" ");
+    strTmp=strdup("");
     //printf("ok\n");
     if (tokens)
     {
@@ -311,11 +347,10 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     if (strcmp(*(tokens + i),"<")==0) 
                         strTmp=strdup("$");
-                    strcat(strTmp,*(tokens + i));
-
+                    strcat(strTmp,*(tokens+i+1));
                     listCmd[nbCmd-1].redirectionin=strTmp;
                     st=NEEDNOTCMDNEXT;
-                    strTmp=strdup(" ");
+                    strTmp=strdup("");
 
                     break;
                     
@@ -326,10 +361,12 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     if (strcmp(*(tokens + i),">")==0) 
                         strTmp=strdup("$");
-                    strcat(strTmp,*(tokens+i));
-                    listCmd[nbCmd-1].redirectionin=strTmp;
+                    strcat(strTmp,*(tokens+i+1));
+                    //printf("looool %s\n",strTmp);
+
+                    listCmd[nbCmd-1].redirectionout=strTmp;
                     st=NEEDNOTCMDNEXT;
-                    strTmp=strdup(" ");
+                    strTmp=strdup("");
 
                     break;
                 
@@ -339,8 +376,12 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
                     }
+                     if (strcmp(*(tokens + i),"2>")==0) 
+                        strTmp=strdup("$");
+                    strcat(strTmp,*(tokens+i+1));
+                   // printf("looool %s\n",strTmp);
                     
-                    listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
+                    listCmd[nbCmd-1].redirectionerror=strTmp;
                     st=NEEDNOTCMDNEXT;
                     break;
                     
@@ -368,9 +409,13 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR STRUCT CMD ");
                         return NULL ;
                     }
-                    strcat(listCmd[nbCmd-1].option," ");
-                    strcat(listCmd[nbCmd-1].option,*(tokens + i));
-                    listCmd[nbCmd-1].nboption++;
+                    if(st==CMDSTART){
+                        strcat(listCmd[nbCmd-1].option," ");
+                        strcat(listCmd[nbCmd-1].option,*(tokens + i));
+                        listCmd[nbCmd-1].nboption++;
+                        
+                    }
+                   
 
                     //printf("option u %s \n",listCmd[nbCmd-1].option);
 
@@ -410,7 +455,6 @@ int main (int argc, char ** argv){
     
     
     char** tokens;
-    char ** option; 
     char currentDir[100] ;
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
@@ -438,19 +482,17 @@ int main (int argc, char ** argv){
             break ;
         if(strcmp(name,"clear")==0)
             clear() ;
+        if(strcmp(name,"")==0)
+            continue ;
         else{
             tokens= str_split(name, ' ');
             cmd=parseCmd(tokens,&nbcmd);
             
-            //printf("looool %s\n",cmd[0].option);
+            //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
-            else{
-                option=str_split(cmd[0].option,' ');
-               // printf("kkkk %s\n",option[0]);
-                (*cmd[0].pfunc)(cmd[0].nboption,option);                /*Appel de la fonction*/
-
-            }
+            else
+                exect(cmd);
             
         }
         

@@ -34,6 +34,7 @@ struct Commande {
     char * redirectionout;
     char * redirectionerror;
     char * redirectionkeyboard ;
+    int (*pfunc)(int,char **);
     int thread ;
     struct Commande * nextCmd;
 
@@ -69,6 +70,10 @@ int lclFunction(char * cmd){
     return 0;
 
 }
+void fileListeFun(Commande *  liCmd , int nbCmd){
+    
+}
+
 /*
 void exect(Commande cmd ){
     Function f[10];

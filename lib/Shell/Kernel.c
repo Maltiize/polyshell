@@ -71,6 +71,12 @@ int lclFunction(char * cmd){
 
 }
 void fileListeFun(Commande *  liCmd , int nbCmd){
+    int i;
+    Function token ;
+    for (i=0;i<nbCmd;i++){
+        token = getFunc(liCmd[i].name);
+        liCmd[i].pfunc=token.pfunc;
+    }
     
 }
 
@@ -172,8 +178,6 @@ char** str_split(char* a_str, const char a_delim)
         }
         tmp++;
     }
-
-
 
     /* Add space for trailing token. */
     count += last_comma < (a_str + strlen(a_str) - 1);

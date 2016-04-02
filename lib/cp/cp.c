@@ -3,6 +3,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <getopt.h> // Pour les arguments
 
@@ -94,30 +95,46 @@ int cp(int argc, char * argv[])
 
     /* ******** Coeur de la fonction ***************/
 
-    //Ouverture du fichier source
-    if ((pFileSrc = fopen(pathSrc,"rb")) == NULL)
-    {
-        printf("ERREUR : Le fichier source que vous avez spécifié n'a plus être ouvert. Vérifier que vous avez les droits nécessaires, et que ce fichier existe. Saisir cp -h pour obtenir de l'aide \n");
-        return 1;
-    }
+    // Récupération du type du fichier analysé
+    struct stat sb; //buffer
+    stat(pathSrc, &sb); //récup info sur le path source
 
-    //Ouverture du fichier de destination
-    if ((pFileDest = fopen(pathDest,"wb")) == NULL)
+    if (S_ISDIR(sb.st_mode)) // SI DOSSIER
     {
+        if (mkdir(pathDest, sb.st_mode) != -1)
+        {
+            printf("Copie du répertoire \"%s\" \n", pathSrc);
+        }
+    }
+    else // Si fichier
+    {
+        //Ouverture du fichier source
+        if ((pFileSrc = fopen(pathSrc,"rb")) == NULL)
+        {
+            printf("ERREUR : Le fichier source que vous avez spécifié n'a plus être ouvert. Vérifier que vous avez les droits nécessaires, et que ce fichier existe. Saisir cp -h pour obtenir de l'aide \n");
+            return 1;
+        }
+
+        //Ouverture du fichier de destination
+        if ((pFileDest = fopen(pathDest,"wb")) == NULL)
+        {
+            fclose(pFileSrc);
+            printf("ERREUR : Le fichier destination que vous avez spécifié n'a plus être ouvert ou créé. Vérifier que vous avez les droits nécessaires. Saisir cp -h pour obtenir de l'aide \n");
+            return 1;
+        }
+
+        //Copie du fichier.
+        while ((etatLecture = fread(buffer, 1, 512, pFileSrc)) != 0)
+        {
+            printf("%s", buffer);
+            fwrite(buffer, 1, etatLecture, pFileDest);
+        }
+
+        //Fermeture Propre des fichiers.
+        fclose(pFileDest);
         fclose(pFileSrc);
-        printf("ERREUR : Le fichier destination que vous avez spécifié n'a plus être ouvert ou créé. Vérifier que vous avez les droits nécessaires. Saisir cp -h pour obtenir de l'aide \n");
-        return 1;
-    }
 
-    //Copie du fichier.
-    while ((etatLecture = fread(buffer, 1, 512, pFileSrc)) != 0)
-    {
-        printf("%s", buffer);
-        fwrite(buffer, 1, etatLecture, pFileDest);
     }
-
-    fclose(pFileDest);
-    fclose(pFileSrc);
 
     return 0;
 }

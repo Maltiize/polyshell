@@ -62,9 +62,15 @@ int bonjour(int argc,char ** argv){
     int i;
     //printf("lol\n");
     printf("bonjour");
+    char result[240];
+
     for(i=1;i<argc;i++)
         printf("%s",argv[i]);
-    printf("\n");
+    //printf("");
+    
+    //int c =0;
+    fgets(result,240,stdin);
+    printf("%s\n",result);
     return 0 ;
     
 }
@@ -150,23 +156,14 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
 
 int exect(Commande *cmd ){
     int file = -1;
+    FILE * ff =NULL ;
     char * tmp  ;  
     int idxToDel = 0; 
+    char name[MAX_NAME_SZ] ;
 
    
     if(fork()==0){
-        if(cmd[0].redirectionout!=NULL){
-            if(cmd[0].redirectionout[0]!='$')
-                file = open(cmd[0].redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
-                
-            else{
-                tmp=cmd[0].redirectionout;
-                memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
-                file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
-            }
-            dup2(file,STDOUT);
-
-        }
+       
         if(cmd[0].redirectionerror!=NULL){
             if(cmd[0].redirectionerror[0]!='$')
                 file = open(cmd[0].redirectionerror,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
@@ -177,6 +174,51 @@ int exect(Commande *cmd ){
                 file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
             }
             dup2(file,STDERR);
+
+        }
+        if(cmd[0].redirectionin!=NULL){
+            if(cmd[0].redirectionin[0]!='$'){
+            ff = tmpfile();
+
+            while(1){
+                printf(">");
+                scanf("%s",name);
+                if(strcmp(name,cmd[0].redirectionin)==0)
+                    break ;
+               // printf("%s\n",name);
+                strcat(name,"\n");
+                fputs (name,ff);
+                
+            }
+                
+                rewind(ff);
+                file = fileno(ff);
+                fgets(name,MAX_NAME_SZ,stdin);
+
+               
+                //file = open(cmd[0].redirectionerror,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+                
+
+            }
+                
+            else{
+               
+            }
+            dup2(file,STDIN);
+            //printf(" klklklkk %s\n",name);
+
+            
+        }
+        if(cmd[0].redirectionout!=NULL){
+            if(cmd[0].redirectionout[0]!='$')
+                file = open(cmd[0].redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+                
+            else{
+                tmp=cmd[0].redirectionout;
+                memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
+                file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
+            }
+            dup2(file,STDOUT);
 
         }
 
@@ -415,6 +457,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         listCmd[nbCmd-1].nboption++;
                         
                     }
+                    if(st == NEEDNOTCMDNEXT)
+                        st=CMDSTART;
                    
 
                     //printf("option u %s \n",listCmd[nbCmd-1].option);
@@ -487,7 +531,8 @@ int main (int argc, char ** argv){
         else{
             tokens= str_split(name, ' ');
             cmd=parseCmd(tokens,&nbcmd);
-            
+            if(cmd==NULL)
+                continue ;
             //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
@@ -506,6 +551,7 @@ int main (int argc, char ** argv){
            putchar(fgetc(fichier));
        }
     printf("Have a wonderful day\n");*/
+    free(name);
     return 0;
 
 }

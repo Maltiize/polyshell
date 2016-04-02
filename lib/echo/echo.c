@@ -85,17 +85,17 @@ int echo(int argc, char *argv[])
         while(chaine[i] != '\0')    //tant qu'on est pas au bout de la chaine on fais des if pour changer les caracteres
         {
             printf("%d",i);
-            if( (chaine[i] = "\\") && (chaine[i+1] == "t") )
+            if( (chaine[i] = '\\') && (chaine[i+1] == 't') )
             {
                 chaine[i]=" _ _ _ _ _ _   ";
             }
-            else if(chaine[i]=="\\_")
+            else if(chaine[i]=='\_')
             {
                 chaine[i]="\n______________________________\n";
             }
-            else if(chaine[i]=="\\n")
+            else if(chaine[i]=='\n')
             {
-                chaine[i]="\n";
+                chaine[i]='\n';
             }
             i++;
         }

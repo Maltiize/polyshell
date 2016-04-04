@@ -82,8 +82,8 @@ int copie(char * pathSrc, char * pathDest)
             #endif
             while(dptr = readdir(dirp)) // On parcours le dossier, pour voir son contenu.
             {
-                strcpy(pathDestTmp, pathDest);
-                strcpy(pathSrcTmp, pathSrc);
+                pathSrcTmp = strdup(pathSrc);
+                pathDestTmp = strdup(pathDest);
 
 
                 #ifdef debug
@@ -99,9 +99,13 @@ int copie(char * pathSrc, char * pathDest)
 
                     if (!S_ISDIR(sb.st_mode)) // SI Fichier
                     {
+                        #ifdef debug
+                        printf("DEBUG : Askip, %s est effectivement un fichier. \n", dptr->d_name);
+                        #endif
                         strcat(pathDestTmp, "/");
                         strcat(pathDestTmp, dptr->d_name); // On update le pathDest
                     }
+
                     #ifdef debug
                     printf("DEBUG : Analyse de %s en cours. Ce fichier doit être copié de %s vers %s \n", dptr->d_name, pathSrcTmp, pathDestTmp);
                     #endif

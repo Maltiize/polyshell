@@ -179,6 +179,11 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
 
 // execute une fonction en appliquant les différentes redirections
 int exect(Commande cmd ){
+    /*if (cmd.nextCmd != NULL){
+        chainExec(cmd);
+        return 1;
+        
+    }*/
     int file = -1;
     FILE * ff =NULL ;
     char * tmp  ;  
@@ -186,7 +191,10 @@ int exect(Commande cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
-        
+        if (cmd.nextCmd != NULL){
+        chainExec(cmd);
+        return 1;
+        }
         // gestion du flux d'erreur
         // si un $ est contenu dans la premiere case il s'agit d'un simple 2> 2>> sinon
         if(cmd.redirectionerror!=NULL){
@@ -208,8 +216,9 @@ int exect(Commande cmd ){
         // gestion du flux d'erreur
         // si un $ est contenu dans la premiere case il s'agit d'un simple < << sinon
         if(cmd.redirectionin!=NULL){
-            
+
             if(cmd.redirectionin[0]!='$'){
+
                 // si il s'agit d'un << il faut stocker tout ce qui est ecrit dans 
                 // stdin jusqu'a que la chaine redirectionin soit tapée
                 
@@ -231,6 +240,8 @@ int exect(Commande cmd ){
             }
                 
             else{
+                
+                
                 printf("%s\n",cmd.redirectionin);
                 tmp=cmd.redirectionin;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
@@ -248,6 +259,7 @@ int exect(Commande cmd ){
                 file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
                 
             else{
+            
                 tmp=cmd.redirectionout;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
@@ -303,36 +315,53 @@ enum Type getType2(char * partCmd){
 
 
 }
-int chainExec(Commande * cmd){
-    
-    int mypipe[2];
-    FILE * ff ;
-    int file ;
-    //int stdoutCopy = dup(1);  
-    char result [240];
-    ff =tmpfile();
-    file = fileno(ff);
-// Clone stdout to a new descriptor
-
-    //pid_t pid;
-     /* Create the pipe. */
-    if(fork()==0){
-    dup2(file,1);
-    printf("klmlkmlkmlkmlk\n");
-    exit(0);
+int chainExec(Commande cmd){
+    if (cmd.nextCmd==NULL) {
+        exect(cmd);
+        return 1;
     }
-    else{
-    wait(NULL);
-    rewind(ff);
-    dup2(file,0);
-    fgets(result,240,stdin);
-    printf("%s",result);
-    }
-
-    close(file);
-
-
-    return 0;
+    int pfd[2];
+   if (pipe(pfd) == -1)
+     {
+       printf("pipe failed\n");
+       return 1;
+     }
+ 
+   /* create the child */
+   int pid;
+   if ((pid = fork()) < 0)
+     {
+       printf("fork failed\n");
+       return 2;
+     }
+ 
+   if (pid == 0)
+     {
+       /* child */
+       //sleep(2);
+       //close(pfd[1]); /* close the unused write side */
+       dup2(pfd[0], 0); /* connect the read side with stdin */
+       close(pfd[0]); /* close the read side */
+       /* execute the process (wc command) */
+       exect(cmd.nextCmd[0]);
+       close(pfd[1]);
+       exit(0);
+     }
+   else
+     {
+       /* parent */
+       //close(pfd[0]); /* close the unused read side */
+       dup2(pfd[1], 1); /* connect the write side with stdout */
+       close(pfd[1]); /* close the write side */
+       /* execute the process (ls command) */
+       cmd.nextCmd=NULL;
+       exect(cmd);
+       close(pfd);
+       exit(0);       
+     }
+    //close(pfd);
+   return 0;
+}
     
 
 char** str_split(char* a_str, const char a_delim)
@@ -402,7 +431,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     if (tokens)
     {
         if(lclFunction(*(tokens))==0){
-            perror("ERROR CMD INCONNUE \n");
+            
+            perror("ERROR CMD INCONNUE lalala \n");
             return NULL;
 
         }

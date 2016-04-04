@@ -94,6 +94,23 @@ int bonjour(int argc,char ** argv){
     return 0 ;
     
 }
+int fout(int argc,char ** argv)
+{
+    printf("j'aime le jambon\n la cocaine \n les morses\n");
+    return 0;
+}
+
+int fin(int argc,char ** argv)
+{
+    
+    printf("n'importe quoi\n");
+    char result[240];
+   
+    fgets(result,240,stdin);
+    strcat(result," et les putes\n");
+    printf(result);
+    return 0;
+}
 // fonction de test
 
 int auRevoir(int argc,char ** argv){
@@ -114,17 +131,19 @@ int aDemain(int argc,char ** argv){
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 3;
+int nbfunction = 5;
 
 // version draft du init
 void initialize(){
     int nb =3;
     int i ;
-    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain};
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin};
     char * name[MAX_NAME_SZ];
     name[0]="bonjour";
     name[1]="auRevoir";
     name[2]="aDemain";
+    name[3]="fout";
+    name[4]="fin";
     
     for(i=0;i<nb;i++){
         listeFu[i].name=name[i];

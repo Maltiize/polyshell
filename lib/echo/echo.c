@@ -41,7 +41,7 @@ int echoarg(int argc, char *argv[])
     if (help == 1)
     {
         printf("Pour utiliser la fonction echo taper : echo [-options] \n");
-        printf("Echo : affiche le message écrit au clavier. \n");
+        printf("Echo : affiche le message écrit au clavier. Ps: Vous pouvez utiliser les variables d'environnements. \n");
         printf("\t -h : Affiche l'aide. \n");
         printf("\t -n : Permet de ne pas faire de retour chariot (ENTRÉE). \n");
         printf("\t -a : Permet de sauter une ligne a chaque mot. \n");
@@ -52,7 +52,19 @@ int echoarg(int argc, char *argv[])
     {
         for(int i=1;i<argc;i++)
 		{
-		    printf("%s", argv[i]);
+            if(*argv[i] == '$'){     //Je regarde si ia un $ pour pouvoir savoir si var d'env si oui j'affiche, pointeur car je compare avec un integer
+                char *res;
+                res = argv[i]+1;
+                if((res=getenv(res))!=NULL){
+	               printf("%s\n",res);
+                }
+	            else{
+	               printf("%s\n",argv[i]);
+               }
+            }
+            else{
+		        printf("%s", argv[i]);
+            }
 		}
 		return 0;
     }
@@ -61,7 +73,19 @@ int echoarg(int argc, char *argv[])
 	{
 		for(int i=1;i<argc;i++)
 		{
-		    printf("%s \n", argv[i]);
+            if(*argv[i] == '$'){     //Je regarde si ia un $ pour pouvoir savoir si var d'env si oui j'affiche, pointeur car je compare avec un integer
+                char *res;
+                res = argv[i]+1;
+                if((res=getenv(res))!=NULL){
+	               printf("%s\n",res);
+                }
+	            else{
+	               printf("%s\n",argv[i]);
+               }
+            }
+            else{
+		        printf("%s \n", argv[i]);
+            }
 		}
 		return 0;
 	}
@@ -69,7 +93,19 @@ int echoarg(int argc, char *argv[])
 	{
         for(int i=1;i<argc;i++)
 		{
-		    printf("%s ", argv[i]);
+            if(*argv[i] == '$'){     //Je regarde si ia un $ pour pouvoir savoir si var d'env si oui j'affiche, pointeur car je compare avec un integer
+                char *res;
+                res = argv[i]+1;
+                if((res=getenv(res))!=NULL){
+	               printf("%s\n",res);
+                }
+	            else{
+	               printf("%s\n",argv[i]);
+               }
+            }
+            else{
+		        printf("%s ", argv[i]);
+            }
 		}
 		printf("\n");
 		return 0;

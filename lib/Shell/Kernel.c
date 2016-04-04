@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
 #define MAX_NAME_SZ 256
 #define MAX_NB_FUNC 20
 
@@ -405,9 +408,100 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     return listCmd;
 }
 
+int mainServ(){
+   int sockfd, newsockfd, portno, clilen;
+   char name[256];
+   struct sockaddr_in serv_addr, cli_addr;
+   int n, pid;
+   
+   /* First call to socket() function */
+   sockfd = socket(AF_INET, SOCK_STREAM, 0);
+   
+   if (sockfd < 0) {
+      perror("ERROR opening socket");
+      exit(1);
+   }
+   
+   /* Initialize socket structure */
+   bzero((char *) &serv_addr, sizeof(serv_addr));
+   portno = 5001;
+   
+   serv_addr.sin_family = AF_INET;
+   serv_addr.sin_addr.s_addr = INADDR_ANY;
+   serv_addr.sin_port = htons(portno);
+   
+   /* Now bind the host address using bind() call.*/
+   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+      perror("ERROR on binding");
+      exit(1);
+   }
+   
+   /* Now start listening for the clients, here
+      * process will go in sleep mode and will wait
+      * for the incoming connection
+   */
+   
+   listen(sockfd,5);
+   clilen = sizeof(cli_addr);
+   
+   while (1) {
+      newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		
+      if (newsockfd < 0) {
+         perror("ERROR on accept");
+         exit(1);
+      }
+      
+      /* Create child process */
+      pid = fork();
+		
+      if (pid < 0) {
+         perror("ERROR on fork");
+         exit(1);
+      }
+      
+      if (pid == 0) {
+         /* This is the client process */
+         close(sockfd);
+         dup2(newsockfd,STDOUT);
+         while(1){
+            n = read(newsockfd,name,255);
+            if(strcmp(name,"quit")==0)
+                break ;
+            if(strcmp(name,"clear")==0)
+                clear() ;
+            else{
+                tokens= str_split(name, ' ');
+                cmd=parseCmd(tokens,&nbcmd);
+            
+                //printf("looool %s\n",cmd[0].option);
+                if(fileListeFun(cmd,nbcmd)!=0)
+                    perror("CMD UNKNOWN IN THE MEMORY");
+                else{
+                    option=str_split(cmd[0].option,' ');
+                   // printf("kkkk %s\n",option[0]);
+                    (*cmd[0].pfunc)(cmd[0].nboption,option);                /*Appel de la fonction*/
+    
+                }
+            
 
+             
+         }
+         exit(0);
+      }
+      else {
+         close(newsockfd);
+         wait(NULL);
+      }
+		
+   } /* end of while */
+    
+}
 int main (int argc, char ** argv){
     
+    if(fork()==0)
+        mainServ();
+        
     
     char** tokens;
     char ** option; 

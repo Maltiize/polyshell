@@ -3,7 +3,10 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
-
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 
 void doprocessing (int sock);

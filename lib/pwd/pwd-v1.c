@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <getopt.h> // Pour les arguments
 
 // Fonction PWD return 0 si ca marche et print le chemin sinon return 0 et écrit qu'il y a un probleme
 int pwd(int argc, char *argv[])

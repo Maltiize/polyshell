@@ -1,35 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> // pour strchr() dans la fonction lire
 #include <getopt.h> // Pour les arguments
 
-int lire(char *chaine, int longueur)
-{
-    char *posEntree = NULL;
-    if (fgets(chaine, longueur, stdin) != NULL)  // Si il n'y a pas d'erreur dans la saisie alors
-    {
-        posEntree = strchr(chaine, '\n'); // On cherche avec strchr le \n
-        if (posEntree != NULL) // On échange le \n par un \0 afin d'enlever le retour à la ligne
-        {
-            *posEntree = '\0';
-        }
-        return 1; // 1 :sans erreur
-    }
-    else
-    {
-        return 0; // 0 : E erreur
-    }
-}
 
-// Fonction echo return 0 si ca marche et print le message sinon return 0 et écrit qu'il y a un probleme
-int echo(int argc, char *argv[])
+// Fonction echoarg avec écriture de l'entrée arg return 0 si ca marche et print le message sinon return 1 et écrit qu'il y a un probleme
+int echoarg(int argc, char *argv[])
 {
     char opt; // Pour stocker les options passé en paramètre 1 à 1
-    char * options = "hne" ; // Les options disponibles
+    char * options = "hna" ; // Les options disponibles
 
     int help = 0; //option h
     int n = 0; // option n : Enleve le retour chariot (ENTRÉE)
-    int e = 0; //Prendre en compte le /n, le /t, et le /_ qui est une ligne de ___________ (délimitation de paragraphe
+    int a = 0; //option e : retour chariot a chaque mot. Option non présente dans le echo de base.
 
     // Récupérer les options
     while ((opt = getopt (argc, argv, options)) != -1)
@@ -46,8 +28,8 @@ int echo(int argc, char *argv[])
             case 'n':
                 n = 1;
                 break;
-            case 'e':
-                e = 1;
+            case 'a':
+                a = 1;
                 break;
             default:
                 printf("Une erreur est survenu lors de la saisie des paramètres. \n");
@@ -62,55 +44,41 @@ int echo(int argc, char *argv[])
         printf("Echo : affiche le message écrit au clavier. \n");
         printf("\t -h : Affiche l'aide. \n");
         printf("\t -n : Permet de ne pas faire de retour chariot (ENTRÉE). \n");
-        printf("\t -a : Permet de faire un retour chariot (ENTRÉE). \n");
-        printf("\t -e : Permet d'accepter les '\\n', les '\\t' et les '\\_'. \n");
-        printf("\t \t -'\\n' retour chariot\n");
-        printf("\t \t -'\\t' tabulation\n");
-        printf("\t \t -'\\_' Séparateur de paragraphes (ligne de _) \n");
+        printf("\t -a : Permet de sauter une ligne a chaque mot. \n");
         return 0;
     }
 
-    char chaine[50];   //Peut etre essayer de rendre ca dynamique ? Utilisé un malloc ??
-
     if (n == 1)     //sans retour chariot
     {
-        lire(chaine, 1000);
+        for(int i=1;i<argc;i++)
+		{
+		    printf("%s", argv[i]);
+		}
+		return 0;
     }
 
-
-    else if (e == 1) //caractère autoriser
-    {
-        fgets(chaine, sizeof chaine, stdin);
-        int i=0;
-        while(chaine[i] != '\0')    //tant qu'on est pas au bout de la chaine on fais des if pour changer les caracteres
-        {
-            printf("%d",i);
-            if( (chaine[i] = '\\') && (chaine[i+1] == 't') )
-            {
-                chaine[i]=" _ _ _ _ _ _   ";
-            }
-            else if(chaine[i]=='\_')
-            {
-                chaine[i]="\n______________________________\n";
-            }
-            else if(chaine[i]=='\n')
-            {
-                chaine[i]='\n';
-            }
-            i++;
-        }
+	if (a == 1) 	//Avec un saut de ligne a chaque mot
+	{
+		for(int i=1;i<argc;i++)
+		{
+		    printf("%s \n", argv[i]);
+		}
+		return 0;
+	}
+	else	//Sinon c'est le echo de base avec retour chariot.
+	{
+        for(int i=1;i<argc;i++)
+		{
+		    printf("%s ", argv[i]);
+		}
+		printf("\n");
+		return 0;
     }
-
-    else
-    {
-        fgets(chaine, sizeof chaine, stdin);
-    }
-
-    printf("%s", chaine);
-
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    echo(argc, argv);
+    echoarg(argc, argv);
+	return 0;
 }

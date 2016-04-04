@@ -41,6 +41,7 @@ main (void)
 {
   pid_t pid;
   int mypipe[2];
+  int file ;
 
   /* Create the pipe. */
   if (pipe (mypipe))

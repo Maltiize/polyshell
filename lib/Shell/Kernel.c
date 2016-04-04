@@ -7,9 +7,12 @@
 #include <sys/wait.h>
 
 
-
+// le nombre de char max pour un nom de fonction
 #define MAX_NAME_SZ 256
+// le nombre max de fonction dans une commande 
 #define MAX_NB_FUNC 20
+
+// les flux standards
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
@@ -18,6 +21,7 @@
 
 typedef struct Function Function;
 typedef struct Commande Commande;
+// permet de simplifier l'ecriture et l'appel des fonctions
 typedef int (*Func)(int, char **);
 
 
@@ -32,12 +36,15 @@ void prompt(char *currentDir, char *hostName);
 void clear();
 void initialize();
 
+
+// les etats de l'automates d'analyse de la commande
 enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 
+// les differents composantes d'une commande 
 enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFTERROR,REDIRECTIONLEFT,REDIRECTIONRIGHTERROR,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
 
 
-
+// structure à remplir pour l'execution d'une commande
 struct Commande {
     char * name;
     char * option;
@@ -46,26 +53,34 @@ struct Commande {
     char * redirectionerror;
     char * redirectionkeyboard ;
     Func pfunc;
+    
+    // thread indique un detachement du terminal
     int thread ;
+    
+    // logique indique un lien logique dans le chainage 
     char logic ;
     int nboption;
+    
+    // nextCmd est un pointeur vers la fonction suivante dans la commande 
     struct Commande * nextCmd;
 
 };
 
+// structure faisant le lien entre les noms de commandes et les fonctions 
 struct Function {
     char * name ;
     Func pfunc;
 };
 
+
+// Structure par defaut de Commande afin d'initialiser plus facilement les instances
 Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'y',1,NULL};
 
 
 
-
+// fonction de test
 int bonjour(int argc,char ** argv){
     int i;
-    //printf("lol\n");
     printf("bonjour   ");
     char result[240];
 
@@ -79,6 +94,7 @@ int bonjour(int argc,char ** argv){
     return 0 ;
     
 }
+// fonction de test
 
 int auRevoir(int argc,char ** argv){
     printf("au revoir papa \n");
@@ -87,6 +103,7 @@ int auRevoir(int argc,char ** argv){
 
 }
 
+// fonction de test
 
 int aDemain(int argc,char ** argv){
     printf("a demain papa \n");
@@ -95,10 +112,11 @@ int aDemain(int argc,char ** argv){
 
 }
 
+// variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
 int nbfunction = 3;
 
-
+// version draft du init
 void initialize(){
     int nb =3;
     int i ;
@@ -109,13 +127,13 @@ void initialize(){
     name[2]="aDemain";
     
     for(i=0;i<nb;i++){
-        //printf("test %s \n",name[i]);
         listeFu[i].name=name[i];
         listeFu[i].pfunc=tab[i];
     }
 }
 
-
+// cherche une instance de Function à partir d'une chaine de caractères
+// renvois NULL si rien n'est trouvé
 Function getFunc(char * cmd){
     int i ;
    for(i=0;i<nbfunction;i++){
@@ -137,7 +155,8 @@ int lclFunction(char * cmd){
 
 }
 
-
+// remplie un tableau de structure Commande avec les pointeurs de fonctions 
+// prorata le nom de function stockée dans les Commande 
 int  fileListeFun(Commande *  liCmd , int nbCmd){
     int i;
     Function token ;
@@ -158,8 +177,8 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
     
 }
 
-
-int exect(Commande *cmd ){
+// execute une fonction en appliquant les différentes redirections
+int exect(Commande cmd ){
     int file = -1;
     FILE * ff =NULL ;
     char * tmp  ;  
@@ -167,63 +186,87 @@ int exect(Commande *cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
-        if(cmd[0].redirectionerror!=NULL){
-            if(cmd[0].redirectionerror[0]!='$')
-                file = open(cmd[0].redirectionerror,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+        
+        // gestion du flux d'erreur
+        // si un $ est contenu dans la premiere case il s'agit d'un simple 2> 2>> sinon
+        if(cmd.redirectionerror!=NULL){
+            if(cmd.redirectionerror[0]!='$')
+                file = open(cmd.redirectionerror,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
             else{
-                tmp=cmd[0].redirectionerror;
+                // si un $ se trouve dans la chaine il faut le supprimer
+                tmp=cmd.redirectionerror;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
+                
+                // on ouvre un fichier ayant pour nom la chaine contenue dans redirectionerror
                 file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
             }
+            // on redirige le flux 'erreur' vers le fichier ouvert
             dup2(file,STDERR);
     
         }
-        if(cmd[0].redirectionin!=NULL){
-            if(cmd[0].redirectionin[0]!='$'){
-            ff = tmpfile();
-    
-            while(1){
-                printf(">");
-                scanf("%s",name);
-                if(strcmp(name,cmd[0].redirectionin)==0)
-                    break ;
-                strcat(name,"\n");
-                fputs (name,ff);
-            }
+        
+        // gestion du flux d'erreur
+        // si un $ est contenu dans la premiere case il s'agit d'un simple < << sinon
+        if(cmd.redirectionin!=NULL){
+            
+            if(cmd.redirectionin[0]!='$'){
+                // si il s'agit d'un << il faut stocker tout ce qui est ecrit dans 
+                // stdin jusqu'a que la chaine redirectionin soit tapée
+                
+                // on ouvre un fichier temporaire pour stocker ce que tape l'usr
+                ff = tmpfile();
+                while(1){
+                        printf(">");
+                        scanf("%s",name);
+                        if(strcmp(name,cmd.redirectionin)==0)
+                            break ;
+                        strcat(name,"\n");
+                        fputs (name,ff);
+                    }
+                // on retourne au debut du fichier 
                 rewind(ff);
                 file = fileno(ff);
+                // necessaire car la premiere string est une ligne vide 
                 fgets(name,MAX_NAME_SZ,stdin);
             }
                 
             else{
-                printf("%s\n",cmd[0].redirectionin);
-                tmp=cmd[0].redirectionin;
+                printf("%s\n",cmd.redirectionin);
+                tmp=cmd.redirectionin;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 ff = fopen(tmp,"r");
                 rewind(ff);
                 file=fileno(ff);
-    
             }
             dup2(file,STDIN);
          
         }
-        if(cmd[0].redirectionout!=NULL){
-            if(cmd[0].redirectionout[0]!='$')
-                file = open(cmd[0].redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
+        // gestion du flux standards de sortie 
+        // meme fonctionnement que pour stderr
+        if(cmd.redirectionout!=NULL){
+            if(cmd.redirectionout[0]!='$')
+                file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
                 
             else{
-                tmp=cmd[0].redirectionout;
+                tmp=cmd.redirectionout;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
             }
             dup2(file,STDOUT);
         }
-        char ** option=str_split(cmd[0].option,' ');
-        (*cmd[0].pfunc)(cmd[0].nboption,option);      
+        
+        //on separe les options en sous chaines 
+        char ** option=str_split(cmd.option,' ');
+        
+        // on appelle la fonction
+        (*cmd.pfunc)(cmd.nboption,option);   
+        
+        // on ferme le fichier si il a été ouvert
         if(file!=-1)
             close(file);
         exit(0);
     }
+    // on attend la fin du fils 
     else
         wait(NULL);
    
@@ -260,7 +303,37 @@ enum Type getType2(char * partCmd){
 
 
 }
+int chainExec(Commande * cmd){
+    
+    int mypipe[2];
+    FILE * ff ;
+    int file ;
+    //int stdoutCopy = dup(1);  
+    char result [240];
+    ff =tmpfile();
+    file = fileno(ff);
+// Clone stdout to a new descriptor
 
+    //pid_t pid;
+     /* Create the pipe. */
+    if(fork()==0){
+    dup2(file,1);
+    printf("klmlkmlkmlkmlk\n");
+    exit(0);
+    }
+    else{
+    wait(NULL);
+    rewind(ff);
+    dup2(file,0);
+    fgets(result,240,stdin);
+    printf("%s",result);
+    }
+
+    close(file);
+
+
+    return 0;
+    
 
 char** str_split(char* a_str, const char a_delim)
 {
@@ -457,10 +530,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     if(st == NEEDNOTCMDNEXT)
                         st=CMDSTART;
-                   
-
-                    //printf("option u %s \n",listCmd[nbCmd-1].option);
-
                     break;
                 case LOGIC :
                     if(st!=CMDSTART){
@@ -476,11 +545,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     break;
                 
             }
-
-            //if (getType(*(tokens + i))==0) printf("i'm in");
-
-            //printf(listCmd[nbCmd].name);
-            //printf("subCMD=[%s] type %d\n", *(tokens + i),getType2(*(tokens + i)));
         }
         //printf("ok \n");
     }
@@ -535,7 +599,7 @@ int main (int argc, char ** argv){
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                exect(cmd);
+                exect(cmd[0]);
                 fflush(stdout);
             }
             
@@ -560,20 +624,10 @@ void clear(){
 }
 
 void prompt(char *currentDir, char *hostName){
-	// username@nameofthemachine:currentdirectory
 
 	getcwd(currentDir,sizeof(currentDir));
 	gethostname(hostName, sizeof(hostName));
 
-	// TEST : 
-	//currentDir = get_current_dir_name();
-	//getlogin_r(hostName, sizeof(hostName));
-	// getenv("NAME");
-	//getenv("PWD")
-	//get_current_dir_name()
-
-
-	// strcmp(currentDir,"") == *currentDir == NULL;
 	
 	if ((strcmp(currentDir,"") == 0) && (strcmp(hostName,"") == 0)){
 		printf("%s@bash:~$ ", getlogin());

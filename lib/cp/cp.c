@@ -1,4 +1,7 @@
 #define _GNU_SOURCE
+
+#define debug   //  Define perso qui affiche les messages de Debug !
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -12,135 +15,108 @@
 #include <getopt.h> // Pour les arguments
 #include <string.h>
 
+
+
 int copie(char * pathSrc, char * pathDest)
 {
     FILE *pFileSrc;         // Fichier Source
     FILE *pFileDest;        // Fichier Destination
     DIR *dirp;
   	struct dirent *dptr;
-    char *newPathSrc;
-    char *newPathDest;
     int etatLecture;        //Lors de la copie, l'état lecture renvera un chiffre != 0 pour indiquer la fin de la lecture du fichier source.
-    char buffer[512];       //Buffer
-    int retour;
-    char * currentDir;
+
+    char buffer[PATH_MAX+1];       //Buffer
+    char buffer1[PATH_MAX+1];       //Buffer
+    char buffer2[PATH_MAX+1];       //Buffer
+
+    char * nameCurrentDir;
     // Récupération du type du fichier analysé
     struct stat sb; //buffer
+
+
+    pathSrc = realpath(pathSrc, buffer1); //Get absolute path de la source
+
+
+    #ifdef debug
+    printf("\n ----------- \nDEBUG : Bienvenue dans copie ! :) le pathSrc = %s et le pathDest = %s \n", pathSrc, pathDest);
+    #endif
+    // debug
+    char * pathSrcTmp = pathSrc;
+    char * pathDestTmp = pathDest;
+
     stat(pathSrc, &sb); //récup info sur le path source
 
     if (S_ISDIR(sb.st_mode)) // SI DOSSIER
     {
-        if ((dirp=opendir(pathSrc)) == NULL) //On l'ouvre
+        #ifdef debug
+        printf("DEBUG : Il semble que %s soit un dossier... \n", pathSrc);
+        #endif // debug
+        pathDest = realpath(pathDest, buffer2); //Get absolute path dest.
+        // On ouvre le dossier source
+        if ((dirp=opendir(pathSrc)) == NULL)
             {
                 printf("Erreur, impossible d'ouvrir le répertoire");
                 return 1;
             }
 
+        // On entre dedans
         if (chdir(pathSrc) != 0)
         {
                 printf("Erreur, impossible d'accéder au répertoire source");
                 return 1;
         }
-        currentDir = basename(get_current_dir_name());
-        strcat(pathDest, "/");
-        strcat(pathDest, basename(get_current_dir_name()) );
-        printf("current :%s \n",currentDir);
-        printf("Source:%s \n",pathSrc);
-        printf("destination:%s \n",pathDest);
 
-        // SI CHEMIN NON RELATIF
-        if (pathDest[0] == '/')
+
+        nameCurrentDir = basename(pathSrc); //Récup du nom du dossier courant à copier (sans le path)
+        strcat(pathDest, "/"); //On ajoute / au pathDest
+        strcat(pathDest, nameCurrentDir ); // On ajoute le nom du dossier à ajouter.
+
+        #ifdef debug
+        printf("DEBUG : On souhaite créer le dossier %s vers %s ... \n", pathSrc, pathDest);
+        #endif // debug
+
+        if (mkdir(pathDest, sb.st_mode) == 0)   //Création du dossier
         {
-            if (chdir(pathSrc) != 0)
+            #ifdef debug
+            printf("DEBUG : Le dossier %s a bien été créé ! \n", nameCurrentDir);
+            #endif
+            while(dptr = readdir(dirp)) // On parcours le dossier, pour voir son contenu.
             {
-                printf("Erreur, impossible de retourner au répertoire parent");
-            }
-        }
-        else // CHEMIN RELATIF
-        {
-            if (chdir("..") != 0)
-            {
-                printf("Erreur, impossible de retourner au répertoire parent");
-            }
-        }
+                strcpy(pathDestTmp, pathDest);
+                strcpy(pathSrcTmp, pathSrc);
 
 
-        if (mkdir(pathDest, sb.st_mode) == 0)
-        {
-            //Pour chaque entrée du répertoire...
-            while(dptr = readdir(dirp))
-            {
-                newPathDest = pathDest;
-                newPathSrc = pathSrc;
-                printf("--> %s (%s)",newPathDest, dptr->d_name);
+                #ifdef debug
+                    printf("DEBUG : WHILE \n\t pathSrc = %s \n\t pathSrcTmp = %s \n\t pathDest= %s \n\t pathDestTmp = %s \n ", pathSrc, pathSrcTmp, pathDest, pathDestTmp);
+                #endif
 
-                stat(dptr->d_name, &sb); //récup info sur le path source
-
-                 if((strcmp(".",dptr->d_name) != 0) && (strcmp("..",dptr->d_name) != 0))
+                if((strcmp(".",dptr->d_name) != 0) && (strcmp("..",dptr->d_name) != 0)) // On ne veut pas du . et du .. !
                 {
-                    strcat(newPathDest, "/");
-                    strcat(newPathDest, dptr->d_name);
-                    strcat(newPathSrc, "/");
-                    strcat(newPathSrc, dptr->d_name);
-                    //currentDir = basename(get_current_dir_name());
+                    stat(dptr->d_name, &sb); //Pour chaque entrée, on récupère les informations.
 
-                    printf("\n Copie de %s (%s) vers (%s) - dossier : %s \n",dptr->d_name, pathSrc, pathDest, currentDir);
-                    copie(newPathSrc, newPathDest);
+                    strcat(pathSrcTmp, "/");
+                    strcat(pathSrcTmp, dptr->d_name); // On update le pathSrc
+
+                    if (!S_ISDIR(sb.st_mode)) // SI Fichier
+                    {
+                        strcat(pathDestTmp, "/");
+                        strcat(pathDestTmp, dptr->d_name); // On update le pathDest
+                    }
+                    #ifdef debug
+                    printf("DEBUG : Analyse de %s en cours. Ce fichier doit être copié de %s vers %s \n", dptr->d_name, pathSrcTmp, pathDestTmp);
+                    #endif
+                    copie(pathSrcTmp, pathDestTmp);
                 }
-            }
-             // Test l'ouverture du chemin et ouverture si OK, erreur sinon.
-            printf("Copie du répertoire %s vers %s \n", pathSrc, pathDest);
-        }
-        else
-        {
-            switch(errno)
-            {
-                case EACCES:
-                    printf("Accés");
-                    break;
-                    case EDQUOT:
-                    printf("Quota");
-                    break;
-                    case EEXIST:
-                    printf("EEXIST");
-                    break;
-                    case EFAULT:
-                    printf("EFAULT");
-                    break;
-                    case ELOOP:
-                    printf("ELOOP");
-                    break;
-                    case EMLINK:
-                    printf("EMLINK");
-                    break;
-                    case ENAMETOOLONG:
-                    printf("ENAMETOOLONG");
-                    break;
-                    case ENOENT:
-                    printf("ENOENT");
-                    break;
-                    case ENOMEM:
-                    printf("ENOMEM");
-                    break;
-                    case ENOSPC:
-                    printf("ENOSPC");
-                    break;
-                    case ENOTDIR:
-                    printf("ENOTDIR");
-                    break;
-                    case EPERM:
-                    printf("EPERM");
-                    break;
 
-                    case EROFS:
-                    printf("EROFS");
-                    break;
             }
-            printf("La création du répertoire a échoué ! %d", errno);
         }
+
     }
     else // Si fichier
     {
+        #ifdef debug
+        printf("DEBUG : Il semble que %s soit un fichier... \n", pathSrc);
+        #endif // debug
         //Ouverture du fichier source
         if ((pFileSrc = fopen(pathSrc,"rb")) == NULL)
         {
@@ -153,6 +129,9 @@ int copie(char * pathSrc, char * pathDest)
         {
             fclose(pFileSrc);
             printf("ERREUR : Le fichier destination que vous avez spécifié n'a plus être ouvert ou créé. Vérifier que vous avez les droits nécessaires. Saisir cp -h pour obtenir de l'aide \n");
+            #ifdef debug
+            printf("DEBUG : pathSrc : %s pathDest %s \n", pathSrc, pathDest);
+            #endif
             return 1;
         }
         //Copie du fichier.
@@ -162,6 +141,9 @@ int copie(char * pathSrc, char * pathDest)
             printf("%s", buffer);
             fwrite(buffer, 1, etatLecture, pFileDest);
         }
+        #ifdef debug
+            printf("DEBUG : Il semble que le fichier a bien été créé... La suite maestro !\n");
+        #endif
         //Fermeture Propre des fichiers.
         fclose(pFileDest);
         fclose(pFileSrc);

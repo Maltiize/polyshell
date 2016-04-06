@@ -86,7 +86,7 @@ int bonjour(int argc,char ** argv){
 
     for(i=1;i<argc;i++)
         printf("%s",argv[i]);
-    printf("\n");
+    //printf("\n");
     
     //int c =0;
     fgets(result,240,stdin);
@@ -96,14 +96,14 @@ int bonjour(int argc,char ** argv){
 }
 int fout(int argc,char ** argv)
 {
-    printf("j'aime le jambon\n la cocaine \n les morses\n");
+    printf("j'aime le jambon\n");
     return 0;
 }
 
 int fin(int argc,char ** argv)
 {
     
-    printf("n'importe quoi\n");
+    
     char result[240];
    
     fgets(result,240,stdin);
@@ -135,7 +135,7 @@ int nbfunction = 5;
 
 // version draft du init
 void initialize(){
-    int nb =3;
+    int nb =5;
     int i ;
     Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin};
     char * name[MAX_NAME_SZ];
@@ -261,7 +261,7 @@ int exect(Commande cmd ){
             else{
                 
                 
-                printf("%s\n",cmd.redirectionin);
+                //printf("%s\n",cmd.redirectionin);
                 tmp=cmd.redirectionin;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 ff = fopen(tmp,"r");
@@ -335,6 +335,9 @@ enum Type getType2(char * partCmd){
 
 }
 int chainExec(Commande cmd){
+    pid_t pidt;
+    int status;
+
     if (cmd.nextCmd==NULL) {
         exect(cmd);
         return 1;
@@ -357,26 +360,32 @@ int chainExec(Commande cmd){
    if (pid == 0)
      {
        /* child */
-       //sleep(2);
-       //close(pfd[1]); /* close the unused write side */
-       dup2(pfd[0], 0); /* connect the read side with stdin */
-       close(pfd[0]); /* close the read side */
-       /* execute the process (wc command) */
-       exect(cmd.nextCmd[0]);
-       close(pfd[1]);
-       exit(0);
-     }
-   else
-     {
-       /* parent */
        //close(pfd[0]); /* close the unused read side */
        dup2(pfd[1], 1); /* connect the write side with stdout */
        close(pfd[1]); /* close the write side */
        /* execute the process (ls command) */
        cmd.nextCmd=NULL;
        exect(cmd);
-       close(pfd);
-       exit(0);       
+       //close(pfd);
+       exit(0);     
+       
+     }
+   else
+     { /* parent */
+        if ((pidt = wait(&status)) == -1)
+                                     /* Wait for child process.      */                                 
+           perror("wait error");
+        else {
+         
+           //close(pfd[1]); /* close the unused write side */
+           dup2(pfd[0], 0); /* connect the read side with stdin */
+           close(pfd[0]); /* close the read side */
+           /* execute the process (wc command) */
+           exect(cmd.nextCmd[0]);
+           //close(pfd[1]);
+           exit(0);
+        }
+         
      }
     //close(pfd);
    return 0;

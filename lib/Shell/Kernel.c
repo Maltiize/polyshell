@@ -1,40 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/wait.h>
-
-
-// le nombre de char max pour un nom de fonction
-#define MAX_NAME_SZ 256
-// le nombre max de fonction dans une commande 
-#define MAX_NB_FUNC 20
-
-// les flux standards
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
-
-
-
-typedef struct Function Function;
-typedef struct Commande Commande;
-// permet de simplifier l'ecriture et l'appel des fonctions
-typedef int (*Func)(int, char **);
-
-
-
-
-char** str_split(char* a_str, const char a_delim);
-int lclFunction(char * cmd);
-int getStructFunct(char ** cmd);
-int getType(char * partCmd);
-Commande * parseCmd(char ** tokens ,int * retnbcmd);
-void prompt(char *currentDir, char *hostName);
-void clear();
-void initialize();
+#include "Core.h" 
 
 
 // les etats de l'automates d'analyse de la commande
@@ -43,34 +7,6 @@ enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 // les differents composantes d'une commande 
 enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFTERROR,REDIRECTIONLEFT,REDIRECTIONRIGHTERROR,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
 
-
-// structure à remplir pour l'execution d'une commande
-struct Commande {
-    char * name;
-    char * option;
-    char * redirectionin;
-    char * redirectionout;
-    char * redirectionerror;
-    char * redirectionkeyboard ;
-    Func pfunc;
-    
-    // thread indique un detachement du terminal
-    int thread ;
-    
-    // logique indique un lien logique dans le chainage 
-    char logic ;
-    int nboption;
-    
-    // nextCmd est un pointeur vers la fonction suivante dans la commande 
-    struct Commande * nextCmd;
-
-};
-
-// structure faisant le lien entre les noms de commandes et les fonctions 
-struct Function {
-    char * name ;
-    Func pfunc;
-};
 
 
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
@@ -303,6 +239,7 @@ enum Type getType2(char * partCmd){
 
 
 }
+/*
 int chainExec(Commande * cmd){
     
     int mypipe[2];
@@ -315,7 +252,6 @@ int chainExec(Commande * cmd){
 // Clone stdout to a new descriptor
 
     //pid_t pid;
-     /* Create the pipe. */
     if(fork()==0){
     dup2(file,1);
     printf("klmlkmlkmlkmlk\n");
@@ -334,7 +270,7 @@ int chainExec(Commande * cmd){
 
     return 0;
     
-
+*/
 char** str_split(char* a_str, const char a_delim)
 {
     char** result    = 0;
@@ -381,6 +317,12 @@ char** str_split(char* a_str, const char a_delim)
 
     return result;
 }
+
+void * rreturn(int ret){
+    if(ret>0)
+        exit(ret);
+    return NULL ;
+}
 // & si besoin de créer un thread
 // < << > >> si besoin de rediriger
 // && || si besoin d'operateur logique
@@ -403,7 +345,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     {
         if(lclFunction(*(tokens))==0){
             perror("ERROR CMD INCONNUE \n");
-            return NULL;
+            return NULL ;
 
         }
 
@@ -457,6 +399,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
+
                     }
                     if (strcmp(*(tokens + i),"<")==0) 
                         strTmp=strdup("$");
@@ -471,6 +414,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
+
                     }
                     if (strcmp(*(tokens + i),">")==0) 
                         strTmp=strdup("$");
@@ -488,6 +432,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
+
                     }
                      if (strcmp(*(tokens + i),"2>")==0) 
                         strTmp=strdup("$");
@@ -502,6 +447,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
+
                     }
                     listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
                     st=NEEDNOTCMDNEXT;
@@ -511,6 +457,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR CHAINAGE MAL PLACEE");
                         return NULL ;
+
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                     st=NEEDCMDNEXT;
@@ -521,6 +468,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                  if(st!=CMDSTART && st!= NEEDNOTCMDNEXT){
                         perror("ERROR STRUCT CMD ");
                         return NULL ;
+
                     }
                     if(st==CMDSTART){
                         strcat(listCmd[nbCmd-1].option," ");
@@ -535,6 +483,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART){
                         perror("ERROR UNEXCEPTED LOGIC ASSIGNEMENT ");
                         return NULL ;
+
                     }
                 if(strcmp(*(tokens + i),"&&")==0)
                     listCmd[nbCmd-1].logic='&';
@@ -548,16 +497,13 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         }
         //printf("ok \n");
     }
-
-
-
     free(tokens);
     *retnbcmd=nbCmd;
     return listCmd;
 }
 
 
-int main (int argc, char ** argv){
+int mainKernel (int argc, char ** argv){
     
     
     char** tokens;
@@ -566,6 +512,7 @@ int main (int argc, char ** argv){
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     Commande * cmd =NULL ;
+    //int pid ;
     
     initialize();
     
@@ -573,40 +520,41 @@ int main (int argc, char ** argv){
             printf ("No memory\n");
             return 1;
         }
-
-
-	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
-    while(1){
-        prompt(currentDir,hostName);
-        /* Get the command, with size limit. */
-        fgets (name, MAX_NAME_SZ, stdin);
-        /* Remove trailing newline, if there. */
-        if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
-            name[strlen (name) - 1] = '\0';
-        
-        if(strcmp(name,"quit")==0)
-            break ;
-        if(strcmp(name,"clear")==0)
-            clear() ;
-        if(strcmp(name,"")==0)
-            continue ;
-        else{
-            tokens= str_split(name, ' ');
-            cmd=parseCmd(tokens,&nbcmd);
-            if(cmd==NULL)
+    
+    
+        printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
+        while(1){
+            prompt(currentDir,hostName);
+            /* Get the command, with size limit. */
+            fgets (name, MAX_NAME_SZ, stdin);
+            /* Remove trailing newline, if there. */
+            if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
+                name[strlen (name) - 1] = '\0';
+            
+            if(strcmp(name,"quit")==0)
+                break ;
+            if(strcmp(name,"clear")==0)
+                clear() ;
+            if(strcmp(name,"")==0)
                 continue ;
-            //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
-            if(fileListeFun(cmd,nbcmd)!=0)
-                perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                exect(cmd[0]);
-                fflush(stdout);
+                tokens= str_split(name, ' ');
+                cmd=parseCmd(tokens,&nbcmd);
+                if(cmd==NULL)
+                    continue ;
+                //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
+                if(fileListeFun(cmd,nbcmd)!=0)
+                    perror("CMD UNKNOWN IN THE MEMORY");
+                else{
+                    exect(cmd[0]);
+                    fflush(stdout);
+                }
+                
             }
             
-        }
+    
         
-
-    }
+        }
     /*
     FILE * fichier =NULL;
     fichier=fopen("testpipe","r+");

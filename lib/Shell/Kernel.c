@@ -52,6 +52,8 @@ struct Commande {
     char * redirectionout;
     char * redirectionerror;
     char * redirectionkeyboard ;
+    int pfd[2];
+
     Func pfunc;
     
     // thread indique un detachement du terminal
@@ -210,10 +212,16 @@ int exect(Commande cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
-        if (cmd.nextCmd != NULL){
-        chainExec(cmd);
-        return 1;
+         if (cmd.nextCmd != NULL && cmd.logic != NULL){
+            printf(cmd.logic);
+            return logicOperator(&cmd);
+            
         }
+        /* if (cmd.nextCmd != NULL && cmd.logic == NULL ){
+          chainExec(cmd);
+        return 1;
+        }*/
+       
         // gestion du flux d'erreur
         // si un $ est contenu dans la premiere case il s'agit d'un simple 2> 2>> sinon
         if(cmd.redirectionerror!=NULL){
@@ -301,10 +309,26 @@ int exect(Commande cmd ){
     else
         wait(NULL);
    
-    return 0;
+    return  0;
 
 }
 
+int logicOperator(Commande *cmd){
+    if (cmd->logic == '&'){
+        cmd->logic== NULL;
+        Commande cmd2 = *(cmd->nextCmd);
+        cmd->nextCmd==NULL;
+        if(exect(*cmd)==0){
+            return exect(cmd2);
+        }
+        else {
+            printf("tous c'est mal passé");
+            return -1;
+            }
+    }
+    
+    
+}
 
 enum Type getType2(char * partCmd){
     char opt='-' ;
@@ -326,23 +350,27 @@ enum Type getType2(char * partCmd){
         return COMPLEMENTCMD;
 
     else{
-        if(lclFunction(partCmd)==1)
-            return CMD ;
+        if(lclFunction(partCmd)==1){
+
+            return CMD ;}
         else
             return UNDEFINED;
     }
 
 
 }
-int chainExec(Commande cmd){
+int chainExec(Commande cmd,int i,int nbCmd){
+    //printf("ok\n");
+    int pfd[2];
     pid_t pidt;
     int status;
-
+    char result[255];
+    
     if (cmd.nextCmd==NULL) {
+        printf("ok\n");
         exect(cmd);
-        return 1;
+        exit(0);
     }
-    int pfd[2];
    if (pipe(pfd) == -1)
      {
        printf("pipe failed\n");
@@ -359,31 +387,37 @@ int chainExec(Commande cmd){
  
    if (pid == 0)
      {
+        close(pfd[0]); /* close the unused read side */
+        dup2(pfd[1], 1); /* connect the write side with stdout */
+        close(pfd[1]); /* close the write side */
        /* child */
-       //close(pfd[0]); /* close the unused read side */
-       dup2(pfd[1], 1); /* connect the write side with stdout */
-       close(pfd[1]); /* close the write side */
-       /* execute the process (ls command) */
-       cmd.nextCmd=NULL;
+      
+       /* execute the process  */
+       //cmd.nextCmd=NULL;
        exect(cmd);
+        
+
        //close(pfd);
        exit(0);     
        
      }
    else
      { /* parent */
+        close(pfd[1]); 
+        dup2(pfd[0], 0);
+        close(pfd[0]); /* close the write side */
         if ((pidt = wait(&status)) == -1)
                                      /* Wait for child process.      */                                 
            perror("wait error");
         else {
-         
+          
            //close(pfd[1]); /* close the unused write side */
-           dup2(pfd[0], 0); /* connect the read side with stdin */
-           close(pfd[0]); /* close the read side */
-           /* execute the process (wc command) */
-           exect(cmd.nextCmd[0]);
-           //close(pfd[1]);
-           exit(0);
+          
+           /* execute the process */
+           chainExec(cmd.nextCmd[0],i+1,nbCmd);
+           
+           
+           //exit(0);
         }
          
      }
@@ -480,6 +514,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
             switch (getType2(*(tokens + i))){
 
                 case CMD:
+
                     if(st!=NEEDCMDNEXT){
                         perror("ERROR STRUCT DEUX NOM DE COMMANDE A LA SUITE");
                         return NULL ;
@@ -594,6 +629,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         perror("ERROR UNEXCEPTED LOGIC ASSIGNEMENT ");
                         return NULL ;
                     }
+                st = NEEDCMDNEXT;
+                listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                 if(strcmp(*(tokens + i),"&&")==0)
                     listCmd[nbCmd-1].logic='&';
                 else
@@ -657,7 +694,11 @@ int main (int argc, char ** argv){
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                exect(cmd[0]);
+                if(fork()==0){
+                    chainExec(cmd[0],0,nbcmd);
+                }
+                else
+                    wait(NULL);
                 fflush(stdout);
             }
             

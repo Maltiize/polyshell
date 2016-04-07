@@ -1,4 +1,41 @@
-#include "Core.h" 
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+
+
+// le nombre de char max pour un nom de fonction
+#define MAX_NAME_SZ 256
+// le nombre max de fonction dans une commande 
+#define MAX_NB_FUNC 20
+
+// les flux standards
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 2
+
+
+
+typedef struct Function Function;
+typedef struct Commande Commande;
+// permet de simplifier l'ecriture et l'appel des fonctions
+typedef int (*Func)(int, char **);
+
+
+
+
+char** str_split(char* a_str, const char a_delim);
+int lclFunction(char * cmd);
+int getStructFunct(char ** cmd);
+int getType(char * partCmd);
+Commande * parseCmd(char ** tokens ,int * retnbcmd);
+void prompt(char *currentDir, char *hostName);
+void clear();
+void initialize();
 
 
 // les etats de l'automates d'analyse de la commande
@@ -7,6 +44,36 @@ enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
 // les differents composantes d'une commande 
 enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFTERROR,REDIRECTIONLEFT,REDIRECTIONRIGHTERROR,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
 
+
+// structure à remplir pour l'execution d'une commande
+struct Commande {
+    char * name;
+    char * option;
+    char * redirectionin;
+    char * redirectionout;
+    char * redirectionerror;
+    char * redirectionkeyboard ;
+    int pfd[2];
+
+    Func pfunc;
+    
+    // thread indique un detachement du terminal
+    int thread ;
+    
+    // logique indique un lien logique dans le chainage 
+    char logic ;
+    int nboption;
+    
+    // nextCmd est un pointeur vers la fonction suivante dans la commande 
+    struct Commande * nextCmd;
+
+};
+
+// structure faisant le lien entre les noms de commandes et les fonctions 
+struct Function {
+    char * name ;
+    Func pfunc;
+};
 
 
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
@@ -22,13 +89,30 @@ int bonjour(int argc,char ** argv){
 
     for(i=1;i<argc;i++)
         printf("%s",argv[i]);
-    printf("\n");
+    //printf("\n");
     
     //int c =0;
     fgets(result,240,stdin);
     printf("stdin %s\n",result);
     return 0 ;
     
+}
+int fout(int argc,char ** argv)
+{
+    printf("j'aime le jambon\n");
+    return 0;
+}
+
+int fin(int argc,char ** argv)
+{
+    
+    
+    char result[240];
+   
+    fgets(result,240,stdin);
+    strcat(result," et les putes\n");
+    printf(result);
+    return 0;
 }
 // fonction de test
 
@@ -50,17 +134,19 @@ int aDemain(int argc,char ** argv){
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 3;
+int nbfunction = 5;
 
 // version draft du init
 void initialize(){
-    int nb =3;
+    int nb =5;
     int i ;
-    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain};
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin};
     char * name[MAX_NAME_SZ];
     name[0]="bonjour";
     name[1]="auRevoir";
     name[2]="aDemain";
+    name[3]="fout";
+    name[4]="fin";
     
     for(i=0;i<nb;i++){
         listeFu[i].name=name[i];
@@ -115,6 +201,11 @@ int  fileListeFun(Commande *  liCmd , int nbCmd){
 
 // execute une fonction en appliquant les différentes redirections
 int exect(Commande cmd ){
+    /*if (cmd.nextCmd != NULL){
+        chainExec(cmd);
+        return 1;
+        
+    }*/
     int file = -1;
     FILE * ff =NULL ;
     char * tmp  ;  
@@ -122,7 +213,16 @@ int exect(Commande cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
-        
+         if (cmd.nextCmd != NULL && cmd.logic != NULL){
+            printf(cmd.logic);
+            return logicOperator(&cmd);
+            
+        }
+        /* if (cmd.nextCmd != NULL && cmd.logic == NULL ){
+          chainExec(cmd);
+        return 1;
+        }*/
+       
         // gestion du flux d'erreur
         // si un $ est contenu dans la premiere case il s'agit d'un simple 2> 2>> sinon
         if(cmd.redirectionerror!=NULL){
@@ -144,8 +244,9 @@ int exect(Commande cmd ){
         // gestion du flux d'erreur
         // si un $ est contenu dans la premiere case il s'agit d'un simple < << sinon
         if(cmd.redirectionin!=NULL){
-            
+
             if(cmd.redirectionin[0]!='$'){
+
                 // si il s'agit d'un << il faut stocker tout ce qui est ecrit dans 
                 // stdin jusqu'a que la chaine redirectionin soit tapée
                 
@@ -167,7 +268,9 @@ int exect(Commande cmd ){
             }
                 
             else{
-                printf("%s\n",cmd.redirectionin);
+                
+                
+                //printf("%s\n",cmd.redirectionin);
                 tmp=cmd.redirectionin;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 ff = fopen(tmp,"r");
@@ -184,6 +287,7 @@ int exect(Commande cmd ){
                 file = open(cmd.redirectionout,O_RDWR|O_CREAT|O_APPEND , S_IRUSR |S_IWUSR) ;
                 
             else{
+            
                 tmp=cmd.redirectionout;
                 memmove(&tmp[idxToDel], &tmp[idxToDel + 1], strlen(tmp) - idxToDel);
                 file = open(tmp,O_RDWR|O_CREAT|O_TRUNC , S_IRUSR |S_IWUSR) ;
@@ -206,10 +310,26 @@ int exect(Commande cmd ){
     else
         wait(NULL);
    
-    return 0;
+    return  0;
 
 }
 
+int logicOperator(Commande *cmd){
+    if (cmd->logic == '&'){
+        cmd->logic== NULL;
+        Commande cmd2 = *(cmd->nextCmd);
+        cmd->nextCmd==NULL;
+        if(exect(*cmd)==0){
+            return exect(cmd2);
+        }
+        else {
+            printf("tous c'est mal passé");
+            return -1;
+            }
+    }
+    
+    
+}
 
 enum Type getType2(char * partCmd){
     char opt='-' ;
@@ -231,46 +351,82 @@ enum Type getType2(char * partCmd){
         return COMPLEMENTCMD;
 
     else{
-        if(lclFunction(partCmd)==1)
-            return CMD ;
+        if(lclFunction(partCmd)==1){
+
+            return CMD ;}
         else
             return UNDEFINED;
     }
 
 
 }
-/*
-int chainExec(Commande * cmd){
+int chainExec(Commande cmd,int i,int nbCmd){
+    //printf("ok\n");
+    int pfd[2];
+    pid_t pidt;
+    int status;
+    char result[255];
     
-    int mypipe[2];
-    FILE * ff ;
-    int file ;
-    //int stdoutCopy = dup(1);  
-    char result [240];
-    ff =tmpfile();
-    file = fileno(ff);
-// Clone stdout to a new descriptor
-
-    //pid_t pid;
-    if(fork()==0){
-    dup2(file,1);
-    printf("klmlkmlkmlkmlk\n");
-    exit(0);
+    if (cmd.nextCmd==NULL) {
+        printf("ok\n");
+        exect(cmd);
+        exit(0);
     }
-    else{
-    wait(NULL);
-    rewind(ff);
-    dup2(file,0);
-    fgets(result,240,stdin);
-    printf("%s",result);
-    }
+   if (pipe(pfd) == -1)
+     {
+       printf("pipe failed\n");
+       return 1;
+     }
+ 
+   /* create the child */
+   int pid;
+   if ((pid = fork()) < 0)
+     {
+       printf("fork failed\n");
+       return 2;
+     }
+ 
+   if (pid == 0)
+     {
+        close(pfd[0]); /* close the unused read side */
+        dup2(pfd[1], 1); /* connect the write side with stdout */
+        close(pfd[1]); /* close the write side */
+       /* child */
+      
+       /* execute the process  */
+       //cmd.nextCmd=NULL;
+       exect(cmd);
+        
 
-    close(file);
-
-
-    return 0;
+       //close(pfd);
+       exit(0);     
+       
+     }
+   else
+     { /* parent */
+        close(pfd[1]); 
+        dup2(pfd[0], 0);
+        close(pfd[0]); /* close the write side */
+        if ((pidt = wait(&status)) == -1)
+                                     /* Wait for child process.      */                                 
+           perror("wait error");
+        else {
+          
+           //close(pfd[1]); /* close the unused write side */
+          
+           /* execute the process */
+           chainExec(cmd.nextCmd[0],i+1,nbCmd);
+           
+           
+           //exit(0);
+        }
+         
+     }
+    //close(pfd);
+   return 0;
+}
     
-*/
+
 char** str_split(char* a_str, const char a_delim)
 {
     char** result    = 0;
@@ -317,12 +473,6 @@ char** str_split(char* a_str, const char a_delim)
 
     return result;
 }
-
-void * rreturn(int ret){
-    if(ret>0)
-        exit(ret);
-    return NULL ;
-}
 // & si besoin de créer un thread
 // < << > >> si besoin de rediriger
 // && || si besoin d'operateur logique
@@ -344,8 +494,9 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     if (tokens)
     {
         if(lclFunction(*(tokens))==0){
-            perror("ERROR CMD INCONNUE \n");
-            return NULL ;
+            
+            perror("ERROR CMD INCONNUE lalala \n");
+            return NULL;
 
         }
 
@@ -364,6 +515,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
             switch (getType2(*(tokens + i))){
 
                 case CMD:
+
                     if(st!=NEEDCMDNEXT){
                         perror("ERROR STRUCT DEUX NOM DE COMMANDE A LA SUITE");
                         return NULL ;
@@ -399,7 +551,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
-
                     }
                     if (strcmp(*(tokens + i),"<")==0) 
                         strTmp=strdup("$");
@@ -414,7 +565,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
-
                     }
                     if (strcmp(*(tokens + i),">")==0) 
                         strTmp=strdup("$");
@@ -432,7 +582,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
-
                     }
                      if (strcmp(*(tokens + i),"2>")==0) 
                         strTmp=strdup("$");
@@ -447,7 +596,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR REDIRECTION MAL PLACEE");
                         return NULL ;
-
                     }
                     listCmd[nbCmd-1].redirectionerror=*(tokens + i+1);
                     st=NEEDNOTCMDNEXT;
@@ -457,7 +605,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART ){
                         perror("ERROR CHAINAGE MAL PLACEE");
                         return NULL ;
-
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                     st=NEEDCMDNEXT;
@@ -468,7 +615,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                  if(st!=CMDSTART && st!= NEEDNOTCMDNEXT){
                         perror("ERROR STRUCT CMD ");
                         return NULL ;
-
                     }
                     if(st==CMDSTART){
                         strcat(listCmd[nbCmd-1].option," ");
@@ -483,8 +629,9 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     if(st!=CMDSTART){
                         perror("ERROR UNEXCEPTED LOGIC ASSIGNEMENT ");
                         return NULL ;
-
                     }
+                st = NEEDCMDNEXT;
+                listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                 if(strcmp(*(tokens + i),"&&")==0)
                     listCmd[nbCmd-1].logic='&';
                 else
@@ -497,13 +644,16 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         }
         //printf("ok \n");
     }
+
+
+
     free(tokens);
     *retnbcmd=nbCmd;
     return listCmd;
 }
 
 
-int mainKernel (int argc, char ** argv){
+int main (int argc, char ** argv){
     
     
     char** tokens;
@@ -512,7 +662,6 @@ int mainKernel (int argc, char ** argv){
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     Commande * cmd =NULL ;
-    //int pid ;
     
     initialize();
     
@@ -520,41 +669,44 @@ int mainKernel (int argc, char ** argv){
             printf ("No memory\n");
             return 1;
         }
-    
-    
-        printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
-        while(1){
-            prompt(currentDir,hostName);
-            /* Get the command, with size limit. */
-            fgets (name, MAX_NAME_SZ, stdin);
-            /* Remove trailing newline, if there. */
-            if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
-                name[strlen (name) - 1] = '\0';
-            
-            if(strcmp(name,"quit")==0)
-                break ;
-            if(strcmp(name,"clear")==0)
-                clear() ;
-            if(strcmp(name,"")==0)
+
+
+	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
+    while(1){
+        prompt(currentDir,hostName);
+        /* Get the command, with size limit. */
+        fgets (name, MAX_NAME_SZ, stdin);
+        /* Remove trailing newline, if there. */
+        if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
+            name[strlen (name) - 1] = '\0';
+        
+        if(strcmp(name,"quit")==0)
+            break ;
+        if(strcmp(name,"clear")==0)
+            clear() ;
+        if(strcmp(name,"")==0)
+            continue ;
+        else{
+            tokens= str_split(name, ' ');
+            cmd=parseCmd(tokens,&nbcmd);
+            if(cmd==NULL)
                 continue ;
+            //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
+            if(fileListeFun(cmd,nbcmd)!=0)
+                perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                tokens= str_split(name, ' ');
-                cmd=parseCmd(tokens,&nbcmd);
-                if(cmd==NULL)
-                    continue ;
-                //printf("looool %d\n",(int)strlen(cmd[0].redirectionout));
-                if(fileListeFun(cmd,nbcmd)!=0)
-                    perror("CMD UNKNOWN IN THE MEMORY");
-                else{
-                    exect(cmd[0]);
-                    fflush(stdout);
+                if(fork()==0){
+                    chainExec(cmd[0],0,nbcmd);
                 }
-                
+                else
+                    wait(NULL);
+                fflush(stdout);
             }
             
-    
-        
         }
+        
+
+    }
     /*
     FILE * fichier =NULL;
     fichier=fopen("testpipe","r+");

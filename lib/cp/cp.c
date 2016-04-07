@@ -1,3 +1,11 @@
+/*
+*   ChangeLog
+*           - Le fichier reconnait les fichiers du "premier niveau" comme des dossiers, mise à part le tout premier fichier rencontrer.
+*               Mise à part ce soucis non négligeable, CP est fonctionnel.
+*
+*/
+
+
 #define _GNU_SOURCE
 
 #define debug   //  Define perso qui affiche les messages de Debug !
@@ -25,7 +33,7 @@ int copie(char * pathSrc, char * pathDest)
   	struct dirent *dptr;
     int etatLecture;        //Lors de la copie, l'état lecture renvera un chiffre != 0 pour indiquer la fin de la lecture du fichier source.
 
-    char buffer[PATH_MAX+1];       //Buffer
+
     char buffer1[PATH_MAX+1];       //Buffer
     char buffer2[PATH_MAX+1];       //Buffer
 
@@ -41,8 +49,7 @@ int copie(char * pathSrc, char * pathDest)
     printf("\n ----------- \nDEBUG : Bienvenue dans copie ! :) le pathSrc = %s et le pathDest = %s \n", pathSrc, pathDest);
     #endif
     // debug
-    char * pathSrcTmp = pathSrc;
-    char * pathDestTmp = pathDest;
+
 
     stat(pathSrc, &sb); //récup info sur le path source
 
@@ -82,8 +89,12 @@ int copie(char * pathSrc, char * pathDest)
             #endif
             while(dptr = readdir(dirp)) // On parcours le dossier, pour voir son contenu.
             {
-                pathSrcTmp = strdup(pathSrc);
-                pathDestTmp = strdup(pathDest);
+            char pathSrcTmp[strlen(pathSrc)+strlen(dptr->d_name)+2];
+            char pathDestTmp[strlen(pathSrc)+strlen(dptr->d_name)+2];
+                stat(dptr->d_name, &sb); //Pour chaque entrée, on récupère les informations.
+
+                strcpy(pathSrcTmp, pathSrc);
+                strcpy(pathDestTmp, pathDest);
 
 
                 #ifdef debug
@@ -92,8 +103,6 @@ int copie(char * pathSrc, char * pathDest)
 
                 if((strcmp(".",dptr->d_name) != 0) && (strcmp("..",dptr->d_name) != 0)) // On ne veut pas du . et du .. !
                 {
-                    stat(dptr->d_name, &sb); //Pour chaque entrée, on récupère les informations.
-
                     strcat(pathSrcTmp, "/");
                     strcat(pathSrcTmp, dptr->d_name); // On update le pathSrc
 
@@ -106,21 +115,32 @@ int copie(char * pathSrc, char * pathDest)
                         strcat(pathDestTmp, dptr->d_name); // On update le pathDest
                     }
 
+
                     #ifdef debug
                     printf("DEBUG : Analyse de %s en cours. Ce fichier doit être copié de %s vers %s \n", dptr->d_name, pathSrcTmp, pathDestTmp);
                     #endif
                     copie(pathSrcTmp, pathDestTmp);
+                    //return 0;
                 }
 
             }
+        }
+        else
+        {
+            printf("ERREUR : La création du dossier n'a plus aboutir.");
+            return 1;
         }
 
     }
     else // Si fichier
     {
+    int blocksize = sb.st_blksize;
+    char *buffer = malloc(blocksize*sizeof(char));       //Buffer
+
         #ifdef debug
         printf("DEBUG : Il semble que %s soit un fichier... \n", pathSrc);
         #endif // debug
+
         //Ouverture du fichier source
         if ((pFileSrc = fopen(pathSrc,"rb")) == NULL)
         {
@@ -139,7 +159,7 @@ int copie(char * pathSrc, char * pathDest)
             return 1;
         }
         //Copie du fichier.
-        while ((etatLecture = fread(buffer, 1, 512, pFileSrc)) != 0)
+        while ((etatLecture = fread(buffer, 1, blocksize, pFileSrc)) != 0)
         {
             printf("Copie du répertoire \"%s\" vers \"%s\" \n", pathSrc, pathDest);
             printf("%s", buffer);

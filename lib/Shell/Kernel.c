@@ -324,14 +324,14 @@ enum Type getType2(char * partCmd){
 
 }
 int chainExec(Commande cmd){
-    //printf("ok\n");
+    
     int pfd[2];
     pid_t pidt;
     int status;
     
     if (cmd.nextCmd==NULL) {
-        printf("ok\n");
         exect(cmd);
+        return 2;
         exit(0);
         
     }
@@ -451,7 +451,6 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     enum State st = CMDSTART;
     char * strTmp;
     strTmp=strdup("");
-    //printf("ok\n");
     for(i=0;i<MAX_NB_FUNC;i++)
         listCmd[i]=Default;
     if (tokens)
@@ -625,7 +624,8 @@ int main (int argc, char ** argv){
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     int i;
-    int testLogic=0;
+    int testLogic[1];
+    testLogic[0]=10;
     //int posChain=0;
     
     Commande * cmd =NULL ;
@@ -649,7 +649,7 @@ int main (int argc, char ** argv){
             name[strlen (name) - 1] = '\0';
         
         if(strcmp(name,"quit")==0){
-            exit(0);
+            
             break;}
         if(strcmp(name,"clear")==0)
             clear() ;
@@ -664,24 +664,29 @@ int main (int argc, char ** argv){
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                if(fork()==0){
+                //if(fork()==0){
                     int boolDejaCmd =0;
                     for (i=0; i<nbcmd ; i++){                                    
 
                               if (boolDejaCmd == 0){
-                                  testLogic=chainExec(cmd[i]);
-                                  printf("les patate\n");
-                                  testLogic=chainExec(cmd[i]);
+                                  if(fork()==0){
+                                      
+                                      testLogic[0]=chainExec(cmd[i]);
+                                      
+                                  }
+                                  else wait(NULL);
+                                  printf("les patate %d\n",testLogic[0]);
+                                  //testLogic[0]=chainExec(cmd[i]);
                                   //chainecmd[posChain]= cmd[i];
                                   if (cmd[i].logic==NULL) boolDejaCmd = 1;
                                   else if (cmd[i].logic=='&'){
                                       if (testLogic!=0) {
-                                          printf("les patate\n");
+                                          printf("non\n");
                                           return -1;
                                       }
                                   }
                                   else if(cmd[i].logic=='|'){
-                                      if (testLogic==0){
+                                      if (testLogic[0]==0){
                                           printf("ok jack\n");
                                           return 0;
                                       }
@@ -689,14 +694,14 @@ int main (int argc, char ** argv){
                               }
                               else {
                                   if (cmd[i].logic=='&'){
-                                      if (testLogic==0) boolDejaCmd = 0;
+                                      if (testLogic[0]==0) boolDejaCmd = 0;
                                       else {
                                           printf("les patate\n");
                                           return -1;
                                       }
                                   }
                                   else if (cmd[i].logic=='|'){
-                                      if (testLogic==0){
+                                      if (testLogic[0]==0){
                                           printf("ok jack\n");
                                           return 0;
                                       }
@@ -728,9 +733,9 @@ int main (int argc, char ** argv){
                     }
                     
                     } */
-                }
+                /*}
                 else
-                    wait(NULL);
+                    wait(NULL);*/
                 fflush(stdout);
             }
             

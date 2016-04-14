@@ -1,83 +1,56 @@
+#include "Kernel.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/wait.h>
+// variable globale stockant les différentes fonctions
+Function listeFu[MAX_NB_FUNC];
+int nbfunction = 5;
+int returnVal;
 
-
-// le nombre de char max pour un nom de fonction
-#define MAX_NAME_SZ 256
-// le nombre max de fonction dans une commande 
-#define MAX_NB_FUNC 20
-
-// les flux standards
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
-
-
-
-typedef struct Function Function;
-typedef struct Commande Commande;
-// permet de simplifier l'ecriture et l'appel des fonctions
-typedef int (*Func)(int, char **);
-
-
-
-
-char** str_split(char* a_str, const char a_delim);
-int lclFunction(char * cmd);
-int getStructFunct(char ** cmd);
-int getType(char * partCmd);
-Commande * parseCmd(char ** tokens ,int * retnbcmd);
-void prompt(char *currentDir, char *hostName);
-void clear();
-void initialize();
-
-
-// les etats de l'automates d'analyse de la commande
-enum State{ NOCMDSTART,CMDSTART,NEEDCMDNEXT,NEEDNOTCMDNEXT,NEWTHREAD};
-
-// les differents composantes d'une commande 
-enum Type{UNDEFINED,CMD,COMPLEMENTCMD,REDIRECTIONLEFTERROR,REDIRECTIONLEFT,REDIRECTIONRIGHTERROR,REDIRECTIONRIGHT,DOUBLECMD,LOGIC};
-
-
-// structure à remplir pour l'execution d'une commande
-struct Commande {
-    char * name;
-    char * option;
-    char * redirectionin;
-    char * redirectionout;
-    char * redirectionerror;
-    char * redirectionkeyboard ;
-    int pfd[2];
-
-    Func pfunc;
+GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
+    int nbgroup =0 ;
+    int i =0;
+    Commande * tmp = &cmd[0] ;
+    tmp = &cmd[0] ;
+    // on compte le nombre de groupe logique
+    while(tmp!=NULL){
+        if(tmp->logic!='!')
+            nbgroup++;
+        tmp = tmp->nextCmd;
+    }
+    // allocation memoire des groupes
+    GroupCommande * ret = malloc(sizeof(GroupCommande)*nbgroup);
+    for(i=0;i<nbgroup;i++)
+        ret[i]=DefaultGrp;
+    i=0;
+    // on boucle sur les commandes 
+    tmp =&cmd[0];
+    while(tmp!=NULL && i<nbgroup){
+       if(ret[i].cmd==NULL){
+        // si il s'agit d'un nouveau groupe on recupere la premiere commande
+        ret[i].cmd=tmp;
+            if(i>0)
+            // si ce n'est pas le premier groupe on le lie au precedent
+                ret[i-1].nextgroup=&ret[i];
+       }
+         if(tmp->logic=='&' || tmp->logic=='|'){
+             // si on rencontre un lien logique on passe sur un autre groupe
+            ret[i].logic=tmp->logic;
+            i++;
+        }
+        // on passeà la commade suivante 
+        tmp = tmp->nextCmd;
+    }
+    i=0;
+    // on supprime les liens inutiles entre les commandes 
+    for(i=0;i<nbCmd;i++){
+        if(cmd[i].logic=='&'|| cmd[i].logic=='|')
+            cmd[i].nextCmd=NULL;
+    }
+    // on renvoit le nombre de groupe 
+    (*retnb)=nbgroup;
+    return ret;
     
-    // thread indique un detachement du terminal
-    int thread ;
-    
-    // logique indique un lien logique dans le chainage 
-    char logic ;
-    int nboption;
-    
-    // nextCmd est un pointeur vers la fonction suivante dans la commande 
-    struct Commande * nextCmd;
+}
 
-};
-
-// structure faisant le lien entre les noms de commandes et les fonctions 
-struct Function {
-    char * name ;
-    Func pfunc;
-};
-
-
-// Structure par defaut de Commande afin d'initialiser plus facilement les instances
-Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'y',1,NULL};
 
 
 
@@ -94,9 +67,10 @@ int bonjour(int argc,char ** argv){
     //int c =0;
     fgets(result,240,stdin);
     printf("stdin %s\n",result);
-    return 0 ;
+    return 14 ;
     
 }
+
 int fout(int argc,char ** argv)
 {
     printf("j'aime le jambon\n");
@@ -111,7 +85,7 @@ int fin(int argc,char ** argv)
    
     fgets(result,240,stdin);
     strcat(result," et les putes\n");
-    printf(result);
+    printf("%s\n",result);
     return 0;
 }
 // fonction de test
@@ -119,7 +93,7 @@ int fin(int argc,char ** argv)
 int auRevoir(int argc,char ** argv){
     printf("au revoir papa \n");
 
-    return 0 ;
+    return 0;
 
 }
 
@@ -131,10 +105,6 @@ int aDemain(int argc,char ** argv){
     return 0 ;
 
 }
-
-// variable globale stockant les différentes fonctions
-Function listeFu[MAX_NB_FUNC];
-int nbfunction = 5;
 
 // version draft du init
 void initialize(){
@@ -206,6 +176,7 @@ int exect(Commande cmd ){
         return 1;
         
     }*/
+    int val;
     int file = -1;
     FILE * ff =NULL ;
     char * tmp  ;  
@@ -213,11 +184,11 @@ int exect(Commande cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
+        /*
          if (cmd.nextCmd != NULL && cmd.logic != NULL){
-            printf(cmd.logic);
             return logicOperator(&cmd);
             
-        }
+        }*/
         /* if (cmd.nextCmd != NULL && cmd.logic == NULL ){
           chainExec(cmd);
         return 1;
@@ -299,37 +270,28 @@ int exect(Commande cmd ){
         char ** option=str_split(cmd.option,' ');
         
         // on appelle la fonction
-        (*cmd.pfunc)(cmd.nboption,option);   
-        
+        val=(*cmd.pfunc)(cmd.nboption,option);   
+
         // on ferme le fichier si il a été ouvert
         if(file!=-1)
             close(file);
-        exit(0);
+        if(val==0)
+            exit(EXIT_SUCCESS);
+        //printf("yesyesyes\n");
+        exit(EXIT_FAILURE);
     }
     // on attend la fin du fils 
     else
-        wait(NULL);
-   
-    return  0;
+        wait(&val);
+    //printf("%d st devrais etre %d \n",val,EXIT_FAILURE);
+   /*if(val==EXIT_FAILURE)
+    printf("yesyesyes \n");*/
+    return  val;
 
 }
 
-int logicOperator(Commande *cmd){
-    if (cmd->logic == '&'){
-        cmd->logic== NULL;
-        Commande cmd2 = *(cmd->nextCmd);
-        cmd->nextCmd==NULL;
-        if(exect(*cmd)==0){
-            return exect(cmd2);
-        }
-        else {
-            printf("tous c'est mal passé");
-            return -1;
-            }
-    }
     
-    
-}
+
 
 enum Type getType2(char * partCmd){
     char opt='-' ;
@@ -359,18 +321,20 @@ enum Type getType2(char * partCmd){
     }
 
 
-}
-int chainExec(Commande cmd,int i,int nbCmd){
+}int chainExec(Commande cmd){
     //printf("ok\n");
     int pfd[2];
     pid_t pidt;
-    int status;
-    char result[255];
+    int status=0;
     
     if (cmd.nextCmd==NULL) {
-        printf("ok\n");
-        exect(cmd);
-        exit(0);
+        //printf("ok\n");
+        status=exect(cmd);
+        if(status==0)
+            exit(EXIT_SUCCESS);
+        printf("popopopo\n");
+        exit(EXIT_FAILURE);
+        
     }
    if (pipe(pfd) == -1)
      {
@@ -399,7 +363,7 @@ int chainExec(Commande cmd,int i,int nbCmd){
         
 
        //close(pfd);
-       exit(0);     
+       exit(10);     
        
      }
    else
@@ -411,20 +375,22 @@ int chainExec(Commande cmd,int i,int nbCmd){
                                      /* Wait for child process.      */                                 
            perror("wait error");
         else {
+            printf("%d kikiki \n" ,status);
           
            //close(pfd[1]); /* close the unused write side */
           
            /* execute the process */
-           chainExec(cmd.nextCmd[0],i+1,nbCmd);
+           chainExec(cmd.nextCmd[0]);
            
            
-           //exit(0);
+           exit(status);
         }
          
      }
     //close(pfd);
-   return 0;
+   return 12;
 }
+    
     
 
 char** str_split(char* a_str, const char a_delim)
@@ -607,6 +573,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                         return NULL ;
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                    listCmd[nbCmd-1].logic='!';
+
                     st=NEEDCMDNEXT;
                     break;
    
@@ -644,7 +612,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         }
         //printf("ok \n");
     }
-
+    listCmd[nbCmd-1].logic='L';
 
 
     free(tokens);
@@ -652,19 +620,49 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     return listCmd;
 }
 
+int exectGroup (GroupCommande * ligrp){
+    GroupCommande * tmp = &ligrp[0];
+    int test;
+    int state=0;
+    while(tmp!=NULL){
+        if(fork()==0){
+                    chainExec((*tmp->cmd));
+                }
+                else{
+                    wait(&test);
+                    if(test==EXIT_SUCCESS)
+                        state=0;
+                    
+                    else
+                        state=1;
+ 
+                }
+        if(tmp->logic=='&' && state == 1)
+            return 1 ;
+        if(tmp->logic=='|' && state == 0)
+            return 0;
+        tmp=tmp->nextgroup;
+    }
+    return state ;
+}
+
+
 
 int main (int argc, char ** argv){
     
-    
+    int nbgroup;
     char** tokens;
     char currentDir[100] ;
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
     Commande * cmd =NULL ;
-    
+    Commande * tmp =NULL;
+    GroupCommande * group ;
+    GroupCommande * tmpgroup;
+    tmpgroup=NULL;
     initialize();
-    
+
      if (name == NULL) {
             printf ("No memory\n");
             return 1;
@@ -695,13 +693,48 @@ int main (int argc, char ** argv){
             if(fileListeFun(cmd,nbcmd)!=0)
                 perror("CMD UNKNOWN IN THE MEMORY");
             else{
-                if(fork()==0){
-                    chainExec(cmd[0],0,nbcmd);
+                
+                
+                 group=processingGroup(cmd,nbcmd,&nbgroup);
+                tmpgroup=&group[0];
+                while(tmpgroup!=NULL){
+                    tmp=tmpgroup->cmd;
+                    printf("logic = %c",tmpgroup->logic);
+                    while(tmp!=NULL){
+                        printf("   Nom commande = %s",tmp->name);
+                        tmp=tmp->nextCmd;
+                    }
+                    printf("\n");
+                    tmpgroup=tmpgroup->nextgroup;
                 }
-                else
-                    wait(NULL);
+                exectGroup(group);
+                    
+                
+               /* if(fork()==0){
+                    chainExec(cmd[0]);
+                }
+                else{
+                    wait(&test);
+                    if(test==EXIT_SUCCESS)
+                        printf("cio \n");
+                    if(test==EXIT_FAILURE)
+                        printf("jh\n");
+                    printf("code renvois %d\n",test);
+                }*/
                 fflush(stdout);
             }
+            
+            /*tmp=&cmd[0];
+                while(tmp!=NULL){
+                    printf("logic = %c",tmp->logic);
+
+                    printf("   Nom commande = %s",tmp->name);
+                    tmp=tmp->nextCmd;
+                }
+                printf("\n");
+            */
+           
+            
             
         }
         

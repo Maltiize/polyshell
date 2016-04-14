@@ -53,6 +53,7 @@ struct Commande {
     char * redirectionout;
     char * redirectionerror;
     char * redirectionkeyboard ;
+    int pfd[2];
 
     Func pfunc;
     
@@ -96,7 +97,23 @@ int bonjour(int argc,char ** argv){
     return 0 ;
     
 }
+int fout(int argc,char ** argv)
+{
+    printf("j'aime le jambon\n");
+    return 0;
+}
 
+int fin(int argc,char ** argv)
+{
+    
+    
+    char result[240];
+   
+    fgets(result,240,stdin);
+    strcat(result," et les putes\n");
+    printf(result);
+    return 0;
+}
 // fonction de test
 
 int auRevoir(int argc,char ** argv){
@@ -117,17 +134,19 @@ int aDemain(int argc,char ** argv){
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 3;
+int nbfunction = 5;
 
 // version draft du init
 void initialize(){
-    int nb =3;
+    int nb =5;
     int i ;
-    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain};
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin};
     char * name[MAX_NAME_SZ];
     name[0]="bonjour";
     name[1]="auRevoir";
     name[2]="aDemain";
+    name[3]="fout";
+    name[4]="fin";
     
     for(i=0;i<nb;i++){
         listeFu[i].name=name[i];
@@ -194,7 +213,11 @@ int exect(Commande cmd ){
     char name[MAX_NAME_SZ] ;
 
     if(fork()==0){
-        
+         if (cmd.nextCmd != NULL && cmd.logic != NULL){
+            printf(cmd.logic);
+            return logicOperator(&cmd);
+            
+        }
         /* if (cmd.nextCmd != NULL && cmd.logic == NULL ){
           chainExec(cmd);
         return 1;
@@ -286,13 +309,27 @@ int exect(Commande cmd ){
     // on attend la fin du fils 
     else
         wait(NULL);
-        return 0;
    
     return  0;
 
 }
 
-
+int logicOperator(Commande *cmd){
+    if (cmd->logic == '&'){
+        cmd->logic== NULL;
+        Commande cmd2 = *(cmd->nextCmd);
+        cmd->nextCmd==NULL;
+        if(exect(*cmd)==0){
+            return exect(cmd2);
+        }
+        else {
+            printf("tous c'est mal passé");
+            return -1;
+            }
+    }
+    
+    
+}
 
 enum Type getType2(char * partCmd){
     char opt='-' ;
@@ -323,17 +360,17 @@ enum Type getType2(char * partCmd){
 
 
 }
-int chainExec(Commande cmd){
+int chainExec(Commande cmd,int i,int nbCmd){
     //printf("ok\n");
     int pfd[2];
     pid_t pidt;
     int status;
+    char result[255];
     
     if (cmd.nextCmd==NULL) {
         printf("ok\n");
         exect(cmd);
         exit(0);
-        
     }
    if (pipe(pfd) == -1)
      {
@@ -378,7 +415,7 @@ int chainExec(Commande cmd){
            //close(pfd[1]); /* close the unused write side */
           
            /* execute the process */
-           chainExec(cmd.nextCmd[0]);
+           chainExec(cmd.nextCmd[0],i+1,nbCmd);
            
            
            //exit(0);
@@ -624,12 +661,7 @@ int main (int argc, char ** argv){
     char hostName[100] ;
     char *name = malloc (MAX_NAME_SZ*sizeof(char));
     int nbcmd ;
-    int i;
-    int testLogic=0;
-    //int posChain=0;
-    
     Commande * cmd =NULL ;
-    //Commande * chainecmd = NULL;
     
     initialize();
     
@@ -648,9 +680,8 @@ int main (int argc, char ** argv){
         if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
             name[strlen (name) - 1] = '\0';
         
-        if(strcmp(name,"quit")==0){
-            exit(0);
-            break;}
+        if(strcmp(name,"quit")==0)
+            break ;
         if(strcmp(name,"clear")==0)
             clear() ;
         if(strcmp(name,"")==0)
@@ -665,69 +696,7 @@ int main (int argc, char ** argv){
                 perror("CMD UNKNOWN IN THE MEMORY");
             else{
                 if(fork()==0){
-                    int boolDejaCmd =0;
-                    for (i=0; i<nbcmd ; i++){                                    
-
-                              if (boolDejaCmd == 0){
-                                  testLogic=chainExec(cmd[i]);
-                                  printf("les patate\n");
-                                  testLogic=chainExec(cmd[i]);
-                                  //chainecmd[posChain]= cmd[i];
-                                  if (cmd[i].logic==NULL) boolDejaCmd = 1;
-                                  else if (cmd[i].logic=='&'){
-                                      if (testLogic!=0) {
-                                          printf("les patate\n");
-                                          return -1;
-                                      }
-                                  }
-                                  else if(cmd[i].logic=='|'){
-                                      if (testLogic==0){
-                                          printf("ok jack\n");
-                                          return 0;
-                                      }
-                                  }
-                              }
-                              else {
-                                  if (cmd[i].logic=='&'){
-                                      if (testLogic==0) boolDejaCmd = 0;
-                                      else {
-                                          printf("les patate\n");
-                                          return -1;
-                                      }
-                                  }
-                                  else if (cmd[i].logic=='|'){
-                                      if (testLogic==0){
-                                          printf("ok jack\n");
-                                          return 0;
-                                      }
-                                      else boolDejaCmd = 1;
-                                          
-                                      
-
-                                      //chainecmd[posChain].logic=cmd[i].logic;
-                                      //posChain++;
-                                  }
-                              }
-                              printf("vous aimer les endive ?\n");
-                              }
-                    /*
-                    while (1){
-                        printf("sadam rules \n");
-                        int a = chainExec(chainecmd[i]);
-                        if (chainecmd[i].logic=='&'){
-                            if (a==0) i++;
-                            else {
-                                printf("non le retour est %d \n",a );
-                            }
-                        }
-                        if (chainecmd[i].logic=='|'){
-                            if (a==0) i = posChain +1;
-                            else i++; 
-                                
-                        
-                    }
-                    
-                    } */
+                    chainExec(cmd[0],0,nbcmd);
                 }
                 else
                     wait(NULL);

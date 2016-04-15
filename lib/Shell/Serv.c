@@ -168,8 +168,7 @@ int launchServ(){
                         int oldsize =0;
                       
                         // on lis la taille du message qui va arriver
-                        
-                        
+    
                         
                     printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
                     while(1){

@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "MyDu.h"
+
 unsigned int duRecusive(char *fichier)  //Fonction recursive de Du pour calculer la taille de chaque fichier
 {
 	struct stat st;
@@ -47,7 +49,7 @@ unsigned int duRecusive(char *fichier)  //Fonction recursive de Du pour calculer
 	return(taille);    // On retourne la taille du dossier
 }
 
-int du(int argc, char *argv[])
+int MyDu(int argc, char *argv[])
 {
 	unsigned int taille;
 
@@ -81,11 +83,10 @@ int du(int argc, char *argv[])
 
     if (help == 1)
     {
-        printf(" \n");
         printf("Pour utiliser la fonction 'du' taper : du [-options]\n");
         printf("Du : Statistiques sur l'utilisation du disque. \n");
-        printf("\t -h : Affiche l'aide. \n \n");
-		printf("\t -a : Affiche les dossiers et les fichiers");
+        printf("\t -h : Affiche l'aide. \n");
+		printf("\t -a : Affiche les dossiers et les fichiers \n");
         return 0;
     }
 
@@ -159,5 +160,5 @@ int du(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    return du(argc, argv);
+    return MyDu(argc, argv);
 }

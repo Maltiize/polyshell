@@ -1,15 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <linux/limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <getopt.h> // Pour les arguments
+#include <stdlib.h>
+#include <getopt.h> //option
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <linux/limits.h>   //path
+#include <stdio.h>  //printf
 
-// Fonction PWD return 0 si ca marche et print le chemin sinon return 0 et écrit qu'il y a un probleme
-int pwd(int argc, char *argv[])
-{
+#include "MyCd.h"
+
+
+
+int MyCd(int argc, char *argv[]){
     int help = 0; //option h
     char opt; // Pour stocker les options passé en paramètre 1 à 1
     char * options = "h" ; // Les options disponibles
@@ -35,19 +37,20 @@ int pwd(int argc, char *argv[])
     // Si -h
     if (help == 1)
     {
-        printf("Pour utiliser la fonction pwd taper : pwd [-options] \n");
-        printf("Affiche le nom du répertoire de travail actuel. \n");
-        printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
+        printf("Pour utiliser la fonction cd taper : cd [-option] [chemin] \n");
+        printf("Pour se déplacer \n");
         printf("\t -h : Affiche l'aide. \n");
         return 0;
     }
 
+    // Déplacement
+    chdir(argv[1]);
+    //Pour écrire le chemin
     char buff[PATH_MAX + 1];    // On stock la taille du chemin max + 1
     char* path = getcwd( buff, PATH_MAX + 1 );
-
         if( path != NULL )  //Si le chemin existe alors on l'écrit et on return
         {
-            printf("%s \n", path);
+            printf("Déplacement dans : %s \n", path);
             return 0;
         }
         else
@@ -55,9 +58,12 @@ int pwd(int argc, char *argv[])
             printf("Erreur le chemin n'existe pas\n");
             return 1;
         }
+    return 0;
 }
 
-int main(int argc, char *argv[])
-{
-    pwd(argc, argv);
+
+
+
+int main(int argc, char *argv[]) {
+    return MyCd(argc, argv);
 }

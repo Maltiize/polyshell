@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <dirent.h>
 
+#include "MyRm.h"
+
 
 int supprDossier(char const *nomdufic){ //Fonction qui supprime le dossier fais en recursive qui parcours un dossier et supprime les fics et si trouve un dossier et refais de meme.
    DIR *repertoire;
@@ -40,7 +42,7 @@ int supprDossier(char const *nomdufic){ //Fonction qui supprime le dossier fais 
    return 0;
 }
 
-int rm(int argc, char *argv[])
+int MyRm(int argc, char *argv[])
 {
 
 	//Partie getopt
@@ -134,6 +136,6 @@ int rm(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    rm(argc, argv);
+    MyRm(argc, argv);
     return 0;
 }

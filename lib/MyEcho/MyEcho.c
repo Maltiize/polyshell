@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h> // Pour les arguments
-
+#include "MyEcho.h"
 
 // Fonction echoarg avec écriture de l'entrée arg return 0 si ca marche et print le message sinon return 1 et écrit qu'il y a un probleme
-int echoarg(int argc, char *argv[])
+int MyEcho(int argc, char *argv[])
 {
     char opt; // Pour stocker les options passé en paramètre 1 à 1
     char * options = "hna" ; // Les options disponibles
@@ -115,6 +115,6 @@ int echoarg(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    echoarg(argc, argv);
+    MyEcho(argc, argv);
 	return 0;
 }

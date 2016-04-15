@@ -1,13 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <getopt.h> // Pour les arguments
+
+#include "MyPwd.h"
 
 // Fonction PWD return 0 si ca marche et print le chemin sinon return 0 et écrit qu'il y a un probleme
-int pwd(int argc, char *argv[])
+int MyPwd(int argc, char *argv[])
 {
     int help = 0; //option h
     char opt; // Pour stocker les options passé en paramètre 1 à 1
@@ -36,7 +39,6 @@ int pwd(int argc, char *argv[])
     {
         printf("Pour utiliser la fonction pwd taper : pwd [-options] \n");
         printf("Affiche le nom du répertoire de travail actuel. \n");
-        printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
         printf("\t -h : Affiche l'aide. \n");
         return 0;
     }
@@ -58,5 +60,5 @@ int pwd(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    pwd(argc, argv);
+    MyPwd(argc, argv);
 }

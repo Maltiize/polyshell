@@ -106,6 +106,7 @@ int copie(char * pathSrc, char * pathDest)
                     strcat(pathSrcTmp, "/");
                     strcat(pathSrcTmp, dptr->d_name); // On update le pathSrc
 
+
                     if (!S_ISDIR(sb.st_mode)) // SI Fichier
                     {
                         #ifdef debug

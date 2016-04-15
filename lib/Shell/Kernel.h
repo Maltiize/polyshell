@@ -39,6 +39,9 @@ int getStructFunct(char ** cmd);
 int getType(char * partCmd);
 Commande * parseCmd(char ** tokens ,int * retnbcmd);
 void prompt(char *currentDir, char *hostName);
+GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb);
+int exectGroup (GroupCommande * ligrp);
+int chainExec(Commande cmd);
 void clear();
 void initialize();
 

@@ -21,7 +21,7 @@
 #define CODE_EMPTY  10
 #define CODE_CLOSE  20
 #define DEFAULT_LST 5
-
+#define END_CMD "@"
 
 typedef struct Function Function;
 typedef struct Commande Commande;

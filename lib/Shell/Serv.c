@@ -18,7 +18,6 @@ void closeServer(){
             terminateChild(i);
     sockserv = CODE_CLOSE;
     close(sockserv);
-    printf("jhjhjjgjhg\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -49,8 +48,6 @@ int terminateChild(int id){
 }
 
 int launchServ(){
-    
-    
     int pid = fork();
     if(pid==0){
         // Handler servant à éteindre le serveur
@@ -68,11 +65,18 @@ int launchServ(){
         
         
         // l'instance de Client utilsé dans chaque processus fils
-        //struct Client token ;
-        int i ,idToken,size,nbcmd;
+        struct Client token ;
+        int i ,idToken,size,nbcmd,nbgroup;
         char ** tokens ;
-        char * name=NULL;
+        char ** test ;
+
+        char *name = malloc (MAX_NAME_SZ*sizeof(char));
         char taille[MAX_NAME_SZ];
+        char buffer[MAX_NAME_SZ];
+        char currentDir[100] ;
+        char hostName[100] ;
+        
+        GroupCommande * group ;
         Commande * cmd;
     
         // liste des clients la tailles max est la constante NB_DEFAULT_CLIENT
@@ -147,8 +151,7 @@ int launchServ(){
                 // plus personne ne peut l'utiliser
 
                 if (liClient[idToken].pid == 0) {
-                    printf("nice\n");
-                    
+
                     // on evite que la fermeture du serveur soit faites deux fois
 
                     sigaction(SIGUSR1, NULL, &oldact);
@@ -158,60 +161,51 @@ int launchServ(){
                     sigaction(SIGUSR1, &act, NULL);
                 
                     // on redirige la sortie standard et d'erreur vers le socket
-    	            //dup2(liClient[idToken].socket, STDOUT_FILENO);
-    	            //dup2(liClient[idToken].socket, STDERR_FILENO);
-    	            
+    	            dup2(liClient[idToken].socket, STDOUT_FILENO);
+    	            dup2(liClient[idToken].socket, STDERR_FILENO);
     	            // tant que le slot n'est pas close 
-                    while(1){
-                        
+
                         int oldsize =0;
-                        
+                      
                         // on lis la taille du message qui va arriver
-                        read(liClient[idToken].socket,taille,MAX_NAME_SZ);
-                        tokens= str_split(taille, ' ');
-
-                        // passe string => int 
-                        size=atoi(taille);
                         
-                        // si la taille de la commande dépasse l'espace alloué précédement
-                        // ou que name est utilisé pour la première fois 
-                        if(oldsize<size || name == NULL)
-                            name = malloc(sizeof(char)*size);
-
-                        // on lit la commande dans name
-                        read(liClient[idToken].socket,name,size);
-    
                         
-                        if(strcmp(name,"quit")==0)
-                            break ;
-                            
-                        if(strcmp(name,"clear")==0)
-                            clear() ;
-                            
-                        if(strcmp(name,"")==0)
+                        
+                    printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
+                    while(1){
+                        prompt(currentDir,hostName);
+                        /* Get the command, with size limit. */
+                        recv(liClient[idToken].socket,buffer,MAX_NAME_SZ,0);
+                        test=str_split(buffer,'#');
+                        name=strdup(*(test));
+                        if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
+                            name[strlen (name) - 1] = '\0';
+                        //printf("vous avez ecris %s taille %d \n",name,(int)strlen(name));
+                        if(strcmp(name,"quit")==0){
+                            close(liClient[idToken].socket);
+                            free(test);
+                            break;
+                        }
+                        else if(strcmp(name,"")==0)
                             continue ;
-                            
                         else{
-                            // split de la commande 
                             tokens= str_split(name, ' ');
                             cmd=parseCmd(tokens,&nbcmd);
-                            
                             if(cmd==NULL)
                                 continue ;
-                                
-                            if(fileListeFun(cmd,nbcmd)!=0){
+                            if(fileListeFun(cmd,nbcmd)!=0)
                                 perror("CMD UNKNOWN IN THE MEMORY");
-                                exit(1);
-                            }
-                        
                             else{
-                                exect(cmd[0]);
-                            }
-                    
+                                group=processingGroup(cmd,nbcmd,&nbgroup);
+                                exectGroup(group);
+                                fflush(stdout);
                         }
-                
-                
+                        
+                        }
+                    
+                    
                     }
+                
                     close(liClient[idToken].socket);
                     liClient[idToken].etat=CODE_EMPTY;
                     nbSocketCl--;

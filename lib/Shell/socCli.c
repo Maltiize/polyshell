@@ -16,6 +16,8 @@ int main(int argc, char *argv[]) {
    struct hostent *server;
    int fin = 0;
    char buffer[256];
+   char * tmp="#";
+
    
    if (argc < 3) {
       fprintf(stderr,"usage %s hostname port\n", argv[0]);
@@ -53,18 +55,29 @@ int main(int argc, char *argv[]) {
    /* Now ask for a message from the user, this message
       * will be read by server
    */
-
+   
+   bzero(buffer,256);
+   recv(sockfd,buffer,255,0);
+   printf("%s",buffer);
    //printf("Please enter the message: ");
    while(fin!=1){
+       bzero(buffer,256);
+         recv(sockfd,buffer,255,0);
+         printf("%s",buffer);
         bzero(buffer,256);
+        strcat(buffer,tmp);
         fgets(buffer,255,stdin);
         if(strcmp(buffer,"quit")==0)
             fin = 1;
-            
-        n = write(sockfd, buffer, strlen(buffer));
+        strcat(buffer,tmp);
+  
+        n=send(sockfd, buffer, strlen(buffer),0);
         if(fin==1)
             return 0;
-        
+         bzero(buffer,256);
+        recv(sockfd,buffer,255,0);
+        printf("%s\n",buffer);
+
    }
   
    

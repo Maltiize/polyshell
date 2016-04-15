@@ -1,23 +1,25 @@
-#include "Kernel.c" 
+#include "Serv.h"
+#include "Kernel.h"
 
 
-static struct Client DefaultClient = {CODE_EMPTY,CODE_EMPTY,CODE_EMPTY};
 
-struct Client  * liClient ;
+static  Client DefaultClient = {CODE_EMPTY,CODE_EMPTY,CODE_EMPTY};
+
+Client  * liClient ;
 int nbSocketCl;
 int sockserv = CODE_EMPTY ;
 int port = STARTING_PORT ;
 
+
 void closeServer(){
     int i;
     for(i=0;i<NB_DEFAULT_CLIENT;i++)
-        liClient[i].etat=CODE_CLOSE;
-    while(1)
-        if(nbSocketCl==0)
-            break ;
-            
+        if(liClient[i].etat==CODE_CLOSE)
+            terminateChild(i);
     sockserv = CODE_CLOSE;
     close(sockserv);
+    printf("jhjhjjgjhg\n");
+    exit(EXIT_SUCCESS);
 }
 
 int getSlotToken(int sock){
@@ -34,27 +36,28 @@ int getSlotToken(int sock){
     return -1 ;
     
 }
+void exitChild(){
+    printf("Child Closed \n");
+    exit(EXIT_SUCCESS);
+}
 int terminateChild(int id){
-    liClient[id].etat=CODE_CLOSE;
+    liClient[id].etat=CODE_EMPTY;
     close(liClient[id].socket);
+    kill(liClient[id].pid,SIGUSR1);
+    nbSocketCl--;
     return 0;
-    
 }
 
-int main(){
+int launchServ(){
     
     
-    
-    if(fork()==0){
-        
-       
-        
-        
+    int pid = fork();
+    if(pid==0){
         // Handler servant à éteindre le serveur
         struct sigaction act, oldact;
         struct sockaddr_in servIN;
         struct sockaddr_in cliIN;
-        socklen_t cliINSZ = sizeof(cliIN);
+        socklen_t cliINSZ = sizeof(struct sockaddr_in);
     
         
         sigaction(SIGUSR1, NULL, &oldact);
@@ -73,7 +76,7 @@ int main(){
         Commande * cmd;
     
         // liste des clients la tailles max est la constante NB_DEFAULT_CLIENT
-        liClient = malloc(sizeof(struct Client)*NB_DEFAULT_CLIENT);
+        liClient = malloc(sizeof( Client)*NB_DEFAULT_CLIENT);
         
         // Initialisation du tableau
         for(i=0;i<NB_DEFAULT_CLIENT;i++)
@@ -89,7 +92,7 @@ int main(){
         }
 
         // La  structure socket
-        bzero((char *) &servIN, sizeof(servIN));
+        bzero((char *) &servIN, sizeof(struct sockaddr_in));
         
         servIN.sin_family = AF_INET;
         servIN.sin_addr.s_addr = INADDR_ANY;
@@ -98,8 +101,8 @@ int main(){
         do {
             port ++;
             servIN.sin_port = htons(port);
-        }while((bind(sockserv, (struct sockaddr *) &servIN, sizeof(servIN)) < 0) );
-        
+        }while((bind(sockserv, (struct sockaddr *) &servIN, sizeof(struct sockaddr_in)) < 0) );
+        printf("SERVER STARTED ON PORT %d \n",port);
         
         
 
@@ -142,20 +145,24 @@ int main(){
                 
                 // l'etat du slot est close
                 // plus personne ne peut l'utiliser
-                liClient[idToken].etat=CODE_CLOSE;
-                
+
                 if (liClient[idToken].pid == 0) {
+                    printf("nice\n");
                     
                     // on evite que la fermeture du serveur soit faites deux fois
-                    act.sa_handler = SIG_DFL;
-    
-    
+
+                    sigaction(SIGUSR1, NULL, &oldact);
+                    act.sa_handler = exitChild;
+                    act.sa_flags = SA_RESTART;
+                    act.sa_mask = oldact.sa_mask;
+                    sigaction(SIGUSR1, &act, NULL);
+                
                     // on redirige la sortie standard et d'erreur vers le socket
-    	            dup2(liClient[idToken].socket, STDOUT_FILENO);
-    	            dup2(liClient[idToken].socket, STDERR_FILENO);
+    	            //dup2(liClient[idToken].socket, STDOUT_FILENO);
+    	            //dup2(liClient[idToken].socket, STDERR_FILENO);
     	            
     	            // tant que le slot n'est pas close 
-                    while(liClient[idToken].etat!=CODE_CLOSE){
+                    while(1){
                         
                         int oldsize =0;
                         
@@ -212,17 +219,10 @@ int main(){
                 }
                 else {
                 close(liClient[idToken].socket);
-                
                 }
-                
             }
-                
-            
         } /* end of while */
         
     }
-    return 0;
-
-    
-    
+    return pid;
 }

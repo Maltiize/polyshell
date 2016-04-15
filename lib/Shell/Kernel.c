@@ -1,9 +1,17 @@
 #include "Kernel.h"
+#include "Serv.h"
+
+
+
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
 int nbfunction = 5;
 int returnVal;
+
+GroupCommande DefaultGrp={NULL,NULL,'!'};
+// Structure par defaut de Commande afin d'initialiser plus facilement les instances
+Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
 
 
 // fonction traitant les groupes logiques à l'intérieur d'une commande 
@@ -654,6 +662,7 @@ int main (int argc, char ** argv){
     //GroupCommande * tmpgroup;
     //tmpgroup=NULL;
     initialize();
+    int pidServ =-1 ;
 
      if (name == NULL) {
             printf ("No memory\n");
@@ -670,12 +679,31 @@ int main (int argc, char ** argv){
         if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
             name[strlen (name) - 1] = '\0';
         
-        if(strcmp(name,"quit")==0)
+        if(strcmp(name,"quit")==0){
+             if(pidServ!=-1)
+                kill(pidServ,SIGUSR1);
             break ;
-        if(strcmp(name,"clear")==0)
+
+        }
+        else if(strcmp(name,"clear")==0)
             clear() ;
-        if(strcmp(name,"")==0)
+        else if(strcmp(name,"")==0)
             continue ;
+        else if(strcmp(name,"launchServ")==0){
+             if(pidServ==-1)
+                pidServ=launchServ();
+            else
+                perror("SERVEUR ALREADY ACTIVE");
+         }
+        else if(strcmp(name,"quitServ")==0){
+             if(pidServ!=-1){
+                kill(pidServ,SIGUSR1);
+                pidServ=-1;
+             }
+            else
+                perror("SERVEUR ALREADY OFF");
+         }
+        
         else{
             tokens= str_split(name, ' ');
             cmd=parseCmd(tokens,&nbcmd);

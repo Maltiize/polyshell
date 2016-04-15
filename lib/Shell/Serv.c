@@ -1,23 +1,24 @@
-#include "Kernel.c" 
+#include "Serv.h"
+#include "Kernel.h"
 
 
-static struct Client DefaultClient = {CODE_EMPTY,CODE_EMPTY,CODE_EMPTY};
 
-struct Client  * liClient ;
+static  Client DefaultClient = {CODE_EMPTY,CODE_EMPTY,CODE_EMPTY};
+
+Client  * liClient ;
 int nbSocketCl;
 int sockserv = CODE_EMPTY ;
 int port = STARTING_PORT ;
 
+
 void closeServer(){
     int i;
     for(i=0;i<NB_DEFAULT_CLIENT;i++)
-        liClient[i].etat=CODE_CLOSE;
-    while(1)
-        if(nbSocketCl==0)
-            break ;
-            
+        if(liClient[i].etat==CODE_CLOSE)
+            terminateChild(i);
     sockserv = CODE_CLOSE;
     close(sockserv);
+    exit(EXIT_SUCCESS);
 }
 
 int getSlotToken(int sock){
@@ -34,27 +35,26 @@ int getSlotToken(int sock){
     return -1 ;
     
 }
+void exitChild(){
+    printf("Child Closed \n");
+    exit(EXIT_SUCCESS);
+}
 int terminateChild(int id){
-    liClient[id].etat=CODE_CLOSE;
+    liClient[id].etat=CODE_EMPTY;
     close(liClient[id].socket);
+    kill(liClient[id].pid,SIGUSR1);
+    nbSocketCl--;
     return 0;
-    
 }
 
-int main(){
-    
-    
-    
-    if(fork()==0){
-        
-       
-        
-        
+int launchServ(){
+    int pid = fork();
+    if(pid==0){
         // Handler servant à éteindre le serveur
         struct sigaction act, oldact;
         struct sockaddr_in servIN;
         struct sockaddr_in cliIN;
-        socklen_t cliINSZ = sizeof(cliIN);
+        socklen_t cliINSZ = sizeof(struct sockaddr_in);
     
         
         sigaction(SIGUSR1, NULL, &oldact);
@@ -65,15 +65,22 @@ int main(){
         
         
         // l'instance de Client utilsé dans chaque processus fils
-        //struct Client token ;
-        int i ,idToken,size,nbcmd;
+        struct Client token ;
+        int i ,idToken,size,nbcmd,nbgroup;
         char ** tokens ;
-        char * name=NULL;
+        char ** test ;
+
+        char *name = malloc (MAX_NAME_SZ*sizeof(char));
         char taille[MAX_NAME_SZ];
+        char buffer[MAX_NAME_SZ];
+        char currentDir[100] ;
+        char hostName[100] ;
+        
+        GroupCommande * group ;
         Commande * cmd;
     
         // liste des clients la tailles max est la constante NB_DEFAULT_CLIENT
-        liClient = malloc(sizeof(struct Client)*NB_DEFAULT_CLIENT);
+        liClient = malloc(sizeof( Client)*NB_DEFAULT_CLIENT);
         
         // Initialisation du tableau
         for(i=0;i<NB_DEFAULT_CLIENT;i++)
@@ -89,7 +96,7 @@ int main(){
         }
 
         // La  structure socket
-        bzero((char *) &servIN, sizeof(servIN));
+        bzero((char *) &servIN, sizeof(struct sockaddr_in));
         
         servIN.sin_family = AF_INET;
         servIN.sin_addr.s_addr = INADDR_ANY;
@@ -98,8 +105,8 @@ int main(){
         do {
             port ++;
             servIN.sin_port = htons(port);
-        }while((bind(sockserv, (struct sockaddr *) &servIN, sizeof(servIN)) < 0) );
-        
+        }while((bind(sockserv, (struct sockaddr *) &servIN, sizeof(struct sockaddr_in)) < 0) );
+        printf("SERVER STARTED ON PORT %d \n",port);
         
         
 
@@ -142,69 +149,62 @@ int main(){
                 
                 // l'etat du slot est close
                 // plus personne ne peut l'utiliser
-                liClient[idToken].etat=CODE_CLOSE;
-                
+
                 if (liClient[idToken].pid == 0) {
-                    
+
                     // on evite que la fermeture du serveur soit faites deux fois
-                    act.sa_handler = SIG_DFL;
-    
-    
+
+                    sigaction(SIGUSR1, NULL, &oldact);
+                    act.sa_handler = exitChild;
+                    act.sa_flags = SA_RESTART;
+                    act.sa_mask = oldact.sa_mask;
+                    sigaction(SIGUSR1, &act, NULL);
+                
                     // on redirige la sortie standard et d'erreur vers le socket
     	            dup2(liClient[idToken].socket, STDOUT_FILENO);
     	            dup2(liClient[idToken].socket, STDERR_FILENO);
-    	            
     	            // tant que le slot n'est pas close 
-                    while(liClient[idToken].etat!=CODE_CLOSE){
-                        
+
                         int oldsize =0;
-                        
+                      
                         // on lis la taille du message qui va arriver
-                        read(liClient[idToken].socket,taille,MAX_NAME_SZ);
-                        tokens= str_split(taille, ' ');
-
-                        // passe string => int 
-                        size=atoi(taille);
-                        
-                        // si la taille de la commande dépasse l'espace alloué précédement
-                        // ou que name est utilisé pour la première fois 
-                        if(oldsize<size || name == NULL)
-                            name = malloc(sizeof(char)*size);
-
-                        // on lit la commande dans name
-                        read(liClient[idToken].socket,name,size);
     
                         
-                        if(strcmp(name,"quit")==0)
-                            break ;
-                            
-                        if(strcmp(name,"clear")==0)
-                            clear() ;
-                            
-                        if(strcmp(name,"")==0)
+                    printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
+                    while(1){
+                        prompt(currentDir,hostName);
+                        /* Get the command, with size limit. */
+                        recv(liClient[idToken].socket,buffer,MAX_NAME_SZ,0);
+                        test=str_split(buffer,'#');
+                        name=strdup(*(test));
+                        if ((strlen(name)>0) && (name[strlen (name) - 1] == '\n'))
+                            name[strlen (name) - 1] = '\0';
+                        //printf("vous avez ecris %s taille %d \n",name,(int)strlen(name));
+                        if(strcmp(name,"quit")==0){
+                            close(liClient[idToken].socket);
+                            free(test);
+                            break;
+                        }
+                        else if(strcmp(name,"")==0)
                             continue ;
-                            
                         else{
-                            // split de la commande 
                             tokens= str_split(name, ' ');
                             cmd=parseCmd(tokens,&nbcmd);
-                            
                             if(cmd==NULL)
                                 continue ;
-                                
-                            if(fileListeFun(cmd,nbcmd)!=0){
+                            if(fileListeFun(cmd,nbcmd)!=0)
                                 perror("CMD UNKNOWN IN THE MEMORY");
-                                exit(1);
-                            }
-                        
                             else{
-                                exect(cmd[0]);
-                            }
-                    
+                                group=processingGroup(cmd,nbcmd,&nbgroup);
+                                exectGroup(group);
+                                fflush(stdout);
                         }
-                
-                
+                        
+                        }
+                    
+                    
                     }
+                
                     close(liClient[idToken].socket);
                     liClient[idToken].etat=CODE_EMPTY;
                     nbSocketCl--;
@@ -212,17 +212,10 @@ int main(){
                 }
                 else {
                 close(liClient[idToken].socket);
-                
                 }
-                
             }
-                
-            
         } /* end of while */
         
     }
-    return 0;
-
-    
-    
+    return pid;
 }

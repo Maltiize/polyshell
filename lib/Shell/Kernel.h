@@ -1,6 +1,6 @@
 
-#ifndef _MON_MODULE_H
-#define _MON_MODULE_H
+#ifndef KERN_H
+#define KERN_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,6 +44,9 @@ int exectGroup (GroupCommande * ligrp);
 int chainExec(Commande cmd);
 void clear();
 void initialize();
+int exect(Commande cmd );
+int  fileListeFun(Commande *  liCmd , int nbCmd);
+
 
 
 // les etats de l'automates d'analyse de la commande
@@ -90,8 +93,5 @@ struct Function {
     Func pfunc;
 };
 
-GroupCommande DefaultGrp={NULL,NULL,'!'};
-// Structure par defaut de Commande afin d'initialiser plus facilement les instances
-Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
 
 #endif

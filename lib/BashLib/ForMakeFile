@@ -1,0 +1,3 @@
+gcc -fPIC -c  MyCd.c MyPwd.c MyDu.c MyRm.c MyEcho.c
+gcc -o LibFunc.so -shared MyCd.o MyPwd.o MyDu.o MyRm.o MyEcho.o
+gcc -Wall Kernel.c Serv.c -o Final -Wl,--no-as-needed -ldl

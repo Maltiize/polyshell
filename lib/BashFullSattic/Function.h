@@ -13,7 +13,9 @@
     int MyLs(int argc, char * argv[]);
     int MyPwd(int argc, char * argv[]);
     int MyRm(int argc, char * argv[]);
-    
+    int MyChgrp(int argc, char * argv[]);
+    int MyChown(int argc, char * argv[]);
+
 
 #endif
 

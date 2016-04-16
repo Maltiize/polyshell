@@ -6,13 +6,16 @@
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 15;
+int nbfunction = 17;
 int returnVal;
+char CurrentDir[MAX_NAME_SZ];
+char DirLib[MAX_NAME_SZ];
+char * help="cd du echo pwd rm cat chmod cp ls mkdir";
+
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
 Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
-
 
 // fonction traitant les groupes logiques à l'intérieur d'une commande 
 
@@ -128,9 +131,12 @@ int aDemain(int argc,char ** argv){
 // version draft du init
 void initialize(){
     int i ;
-    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin,MyCd,MyDu,MyEcho,MyPwd,MyRm,MyCat,MyChmod,MyCp,MyLs,MyMkdir};
+    // liste des différentes fonctions de notre shell
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin,MyCd,MyDu,MyEcho,MyPwd,MyRm,MyCat,MyChmod,MyCp,MyLs,MyMkdir,MyChown,MyChgrp};
     char * name[MAX_NAME_SZ];
-    
+    getcwd(CurrentDir,MAX_NAME_SZ);
+
+    // et les noms de commandes attribuées aux fonctions
     name[0]="bonjour";
     name[1]="auRevoir";
     name[2]="aDemain";
@@ -146,7 +152,11 @@ void initialize(){
     name[12]="cp";
     name[13]="ls";
     name[14]="mkdir";
+    name[15]="chown";
+    name[16]="chgrp";
     
+    
+  
     for(i=0;i<nbfunction;i++){
         listeFu[i].name=name[i];
         listeFu[i].pfunc=tab[i];
@@ -470,7 +480,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     {
         if(lclFunction(*(tokens))==0){
             
-            perror("ERROR CMD INCONNUE lalala \n");
+            perror("ERROR CMD INCONNUE \n");
             return NULL;
 
         }
@@ -679,7 +689,7 @@ int main (int argc, char ** argv){
         }
 
 
-	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
+	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter  \"help\" pour la liste des cmds\n");
     while(1){
         prompt(currentDir,hostName);
         /* Get the command, with size limit. */
@@ -694,6 +704,10 @@ int main (int argc, char ** argv){
             break ;
 
         }
+        else if(strcmp(name,"help")==0)
+            printf("La liste des commandes %s \n",help) ;
+        else if(strcmp(name,"pwd")==0)
+            printf("%s \n",CurrentDir) ;
         else if(strcmp(name,"clear")==0)
             clear() ;
         else if(strcmp(name,"")==0)
@@ -715,6 +729,12 @@ int main (int argc, char ** argv){
         
         else{
             tokens= str_split(name, ' ');
+            if(strcmp(*(tokens),"cd")==0){
+                chdir(*(tokens+1));
+                getcwd(CurrentDir,MAX_NAME_SZ);
+                continue ;
+            }
+
             cmd=parseCmd(tokens,&nbcmd);
             if(cmd==NULL)
                 continue ;

@@ -17,7 +17,7 @@ int mymkdir(int argc, char * argv[])
 
     int help = 0; // -h
     short int m = 0; // -m spécifier le mode
-
+    char * modeArgv; // mode récupéré en argv
     char * path = NULL; // Stock le chemin demandé
     mode_t mode = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // Stock le masque (droits donnés aux répertoires)
 
@@ -59,22 +59,8 @@ int mymkdir(int argc, char * argv[])
         int i;
         for (i = 1; i<argc; i++)
         {
-            if(argv[i][0] != '-')
-            {
-               /// TODO : Faire un appel de la lib CHMOD IMPLÉMENTER -m .
-            /*
-                if (argv[i-1] == "-m")
-                {
-                    if (isdigit(argv[i]))
-                    {
-
-                    }
-                    else
-                    {
-                        printf("ERREUR : -m doit être suivis d'un nombre. Exemple : mkdir newDossier -m 777 \n Saisir mkdir -h pour obtenir de l'aide. \n");
-                    }
-                }
-            */
+             if(argv[i][0] != '-')
+             {
                 if(path != NULL)
                 {
                     printf("ERREUR : Vous ne pouvez spécifier qu'un unique chemin. Saisir mkdir -h pour obtenir de l'aide. \n");
@@ -83,8 +69,14 @@ int mymkdir(int argc, char * argv[])
                 else
                 {
                     path = argv[i];
+
                 }
-            }
+             }
+             else
+             {
+                modeArgv = argv[i+1];
+                i++;
+             }
         }
     }
 
@@ -93,6 +85,22 @@ int mymkdir(int argc, char * argv[])
         printf("ERREUR : Veuillez spécifier le nom du répertoire. Saisir mkdir -h pour obtenir de l'aide. \n");
         return 1;
     }
+
+    if (m == 1) {
+        char* end;
+        mode = (mode_t) strtol(modeArgv, &end, 10); // Convertis String en int (par strtol) puis en mode_t (par cast)
+        if (mode > 777 || mode<0) {
+            printf("ERREUR : Le mode doit etre compris entre 0 et 777");
+            return 1;
+        }
+        if  (*end != '\0')
+        {
+            printf("ERREUR : Fermeture du mode incorrect");
+            return 1;
+        }
+        mode = (mode_t) strtol(modeArgv, &end, 8); // Conversion en base 8
+    }
+
 
     if (mkdir(path,mode) != -1)
     {

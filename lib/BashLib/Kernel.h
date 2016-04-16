@@ -22,7 +22,7 @@
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
-#define LIB_COMMANDS "lib/LibFunc.so"
+#define LIB_COMMANDS "LibFunc.so"
 
 
 

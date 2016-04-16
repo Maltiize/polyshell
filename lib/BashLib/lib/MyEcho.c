@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h> // Pour les arguments
-#include "MyEcho.h"
 
 // Fonction echoarg avec écriture de l'entrée arg return 0 si ca marche et print le message sinon return 1 et écrit qu'il y a un probleme
 int MyEcho(int argc, char *argv[])

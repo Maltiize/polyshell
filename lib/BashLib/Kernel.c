@@ -6,7 +6,7 @@
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 5;
+int nbfunction = 10;
 int returnVal;
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};
@@ -132,7 +132,7 @@ void initialize(){
     char * name[MAX_NAME_SZ];
     char * namelib[MAX_NAME_SZ];
 
-    if ((lib = dlopen(LIB_COMMANDS, RTLD_LAZY)) == NULL) {
+    if ((lib = dlopen("./LibFunc.so", RTLD_LAZY)) == NULL) {
 		perror("libintrouvable\n");
 	}
     name[0]="cd";
@@ -140,18 +140,28 @@ void initialize(){
     name[2]="echo";
     name[3]="pwd";
     name[4]="rm";
+    name[5]="cat";
+    name[6]="chmod";
+    name[7]="cp";
+    name[8]="ls";
+    name[9]="mkdir";
     
     namelib[0]="MyCd";
     namelib[1]="MyDu";
     namelib[2]="MyEcho";
     namelib[3]="MyPwd";
     namelib[4]="MyRm";
+    namelib[5]="MyCat";
+    namelib[6]="MyChmod";
+    namelib[7]="MyCp";
+    namelib[8]="MyLs";
+    namelib[9]="MyMkdir";
     
     
     for(i=0;i<nbfunction;i++){
         listeFu[i].name=name[i];
         if ((listeFu[i].pfunc = (Func) dlsym(lib,namelib[i])) == NULL) 
-            fprintf(stderr, "ERROR CAN'T LOAD %s", listeFu[i].name);
+            fprintf(stderr, "ERROR CAN'T LOAD %s \n", listeFu[i].name);
         
     }
 }

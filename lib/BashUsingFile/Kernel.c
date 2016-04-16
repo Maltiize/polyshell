@@ -360,7 +360,7 @@ int exect(Commande cmd ){
     
 
 // Fonction particpant à l'analyse de l'automate
-enum Type getType2(char * partCmd){
+enum Type getType2(char * partCmd,int op){
     char opt='-' ;
     if( strcmp(partCmd,"&")==0)
         return NEWTHREAD;
@@ -380,8 +380,7 @@ enum Type getType2(char * partCmd){
         return COMPLEMENTCMD;
 
     else{
-        if(lclFunction(partCmd)==1){
-
+        if(  op ==1 && lclFunction(partCmd)==1){
             return CMD ;}
         else
             return UNDEFINED;
@@ -519,6 +518,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     int nbCmd=0;
     enum State st = CMDSTART;
     char * strTmp;
+    int op =0;
     strTmp=strdup("");
     //printf("ok\n");
     for(i=0;i<MAX_NB_FUNC;i++)
@@ -540,7 +540,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         {
            //printf("cmd is %s\n",*(tokens + i));
 
-            switch (getType2(*(tokens + i))){
+            switch (getType2(*(tokens + i),op)){
 
                 case CMD:
 
@@ -552,6 +552,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     listCmd[nbCmd].option = strdup(*(tokens));
                     listCmd[nbCmd].nboption=1;
                     nbCmd++;
+                    op=0;
                     st=CMDSTART ;
                     
                     break;
@@ -633,7 +634,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                     listCmd[nbCmd-1].logic='!';
-
+                    op=0;
                     st=NEEDCMDNEXT;
                     break;
    

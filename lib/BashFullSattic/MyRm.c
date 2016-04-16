@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <dirent.h>
 
-#include "MyRm.h"
 
 
 int supprDossier(char const *nomdufic){ //Fonction qui supprime le dossier fais en recursive qui parcours un dossier et supprime les fics et si trouve un dossier et refais de meme.

@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "MyDu.h"
 
 unsigned int duRecusive(char *fichier)  //Fonction recursive de Du pour calculer la taille de chaque fichier
 {

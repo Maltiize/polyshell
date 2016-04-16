@@ -1,1 +1,9 @@
-gcc -Wall Kernel.c Serv.c MyCd.c MyPs.c MyPwd.c MyDu.c MyRm.c MyEcho.c MyCd.c -o Final
+gcc -Wall Kernel.c Serv.c MyCd.c MyPs.c MyPwd.c MyDu.c MyRm.c MyEcho.c MyCat.c MyChmod.c MyCp.c MyLs.c MyMkdir.c -o Final
+ name[8]="pwd";
+    name[9]="rm";
+    name[10]="cat";
+    name[11]="chmod";
+    name[12]="cp";
+    name[13]="ls";
+    name[14]="mkdir";
+    

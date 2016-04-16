@@ -6,7 +6,7 @@
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 10;
+int nbfunction = 15;
 int returnVal;
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};
@@ -128,7 +128,7 @@ int aDemain(int argc,char ** argv){
 // version draft du init
 void initialize(){
     int i ;
-    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin,MyCd,MyDu,MyEcho,MyPwd,MyRm};
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin,MyCd,MyDu,MyEcho,MyPwd,MyRm,MyCat,MyChmod,MyCp,MyLs,MyMkdir};
     char * name[MAX_NAME_SZ];
     
     name[0]="bonjour";
@@ -141,6 +141,11 @@ void initialize(){
     name[7]="echo";
     name[8]="pwd";
     name[9]="rm";
+    name[10]="cat";
+    name[11]="chmod";
+    name[12]="cp";
+    name[13]="ls";
+    name[14]="mkdir";
     
     for(i=0;i<nbfunction;i++){
         listeFu[i].name=name[i];

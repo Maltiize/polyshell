@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <getopt.h> // Pour les arguments
 
-#include "MyPwd.h"
 
 // Fonction PWD return 0 si ca marche et print le chemin sinon return 0 et écrit qu'il y a un probleme
 int MyPwd(int argc, char *argv[])

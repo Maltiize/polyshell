@@ -65,13 +65,11 @@ int launchServ(){
         
         
         // l'instance de Client utilsé dans chaque processus fils
-        struct Client token ;
-        int i ,idToken,size,nbcmd,nbgroup;
+        int i ,idToken,nbcmd,nbgroup;
         char ** tokens ;
         char ** test ;
 
         char *name = malloc (MAX_NAME_SZ*sizeof(char));
-        char taille[MAX_NAME_SZ];
         char buffer[MAX_NAME_SZ];
         char currentDir[100] ;
         char hostName[100] ;
@@ -165,8 +163,7 @@ int launchServ(){
     	            dup2(liClient[idToken].socket, STDERR_FILENO);
     	            // tant que le slot n'est pas close 
 
-                        int oldsize =0;
-                      
+
                         // on lis la taille du message qui va arriver
     
                         

@@ -24,7 +24,7 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
     
     // on compte le nombre de groupe logique
     while(tmp!=NULL){
-        if(tmp->logic!='!')
+        if(tmp->logic!='!' || tmp->thread==1)
             nbgroup++;
         tmp = tmp->nextCmd;
     }
@@ -52,8 +52,12 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
             ret[i].logic=tmp->logic;
             i++;
         }
-        
-        // on passeà la commade suivante 
+        if(tmp->thread==1){
+             // si on rencontre un nouveau thread on passe sur un autre groupe
+            ret[i].logic=tmp->logic;
+            i++;
+        }
+        // on passeà la commande suivante 
         tmp = tmp->nextCmd;
     }
     i=0;
@@ -297,7 +301,7 @@ int exect(Commande cmd ){
 enum Type getType2(char * partCmd){
     char opt='-' ;
     if( strcmp(partCmd,"&")==0)
-        return NEWTHREAD;
+        return NEWTHR;
     else if( strcmp(partCmd,"&&")==0 || strcmp(partCmd,"||")==0 )
         return LOGIC;
     else if(strcmp(partCmd,">")==0 || strcmp(partCmd,">>")==0 )
@@ -356,15 +360,15 @@ int chainExec(Commande cmd){
      
     // dans le cas d'une sous commande
    if (pid == 0)
-     {
+     {  
         close(pfd[0]); /* close the unused read side */
         dup2(pfd[1], 1); /* connect the write side with stdout */
         close(pfd[1]); /* close the write side */
-       exect(cmd);
+        exect(cmd);
         
 
-       //close(pfd);
-       exit(10);     
+        //close(pfd);
+        exit(10);     
        
      }
    else
@@ -607,7 +611,17 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
 
 
                     break;
-                
+                case NEWTHR :
+                    if(st!=CMDSTART){
+                        perror("ERROR UNEXCEPTED NEWTHREAD ASSIGNEMENT ");
+                        return NULL ;
+                    }
+                st = NEEDCMDNEXT;
+                listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                listCmd[nbCmd-1].thread=1;
+
+
+                    break;
             }
         }
         //printf("ok \n");
@@ -637,6 +651,7 @@ int exectGroup (GroupCommande * ligrp){
                         state=1;
  
                 }
+        
         if(tmp->logic=='&' && state == 1)
             return 1 ;
         if(tmp->logic=='|' && state == 0)

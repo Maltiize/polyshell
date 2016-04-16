@@ -55,10 +55,14 @@ int myChown(int argc, char * argv[])
     }
     if (help == 1) // Si -h
     {
-        printf("Pour utiliser la fonction chown taper : chown [-options] [(Nom Du Nouveau Répertoire)] \n");
+        printf("Pour utiliser la fonction chown taper : chown [nomNouveauProprietaire:nomNouveauGroupe] [cheminDuFichier] \n");
         printf("Astuce : vous pouvez concaténer les options : -l -a = -la \n \n");
         printf("\t -h : Affiche l'aide. \n");
         printf("\t \n");
+        printf("Exemples : \n");
+        printf("chown root test \t Le nouveau propriétaire de \"test\" est root\n");
+        printf("chown root:root test \t Le nouveau propriétaire est root, et \"test\" appartient au groupe de root \n");
+        printf("chown :root test \t Le nouveau groupe de \"test\" est celui de root\n");
         return 0;
     }
 

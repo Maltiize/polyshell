@@ -10,7 +10,7 @@ int nbfunction = 17;
 int returnVal;
 char CurrentDir[MAX_NAME_SZ];
 char DirLib[MAX_NAME_SZ];
-char * help="cd du echo pwd rm cat chmod cp ls mkdir";
+char * help="cd du echo pwd rm cat chmod cp ls mkdir chgrp chown";
 
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};

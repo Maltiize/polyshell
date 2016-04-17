@@ -15,7 +15,7 @@ GroupCommande DefaultGrp={NULL,NULL,'!'};
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
 Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
 
-char * help="cd du echo pwd rm cat chmod cp ls mkdir";
+char * help="cd du echo pwd rm cat chmod cp ls mkdir chgrp chown";
 
 
 // fonction traitant les groupes logiques à l'intérieur d'une commande 

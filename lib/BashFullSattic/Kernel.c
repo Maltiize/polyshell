@@ -27,7 +27,7 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
     
     // on compte le nombre de groupe logique
     while(tmp!=NULL){
-        if(tmp->logic!='!')
+        if(tmp->logic!='!' || tmp->thread==1)
             nbgroup++;
         tmp = tmp->nextCmd;
     }
@@ -55,6 +55,10 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
             ret[i].logic=tmp->logic;
             i++;
         }
+        if(tmp->thread==1){
+             // si on rencontre un nouveau thread on passe sur un autre groupe
+            i++;
+        }
         
         // on passeà la commade suivante 
         tmp = tmp->nextCmd;
@@ -63,7 +67,7 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
     
     // on supprime les liens inutiles entre les commandes 
     for(i=0;i<nbCmd;i++){
-        if(cmd[i].logic=='&'|| cmd[i].logic=='|')
+        if(cmd[i].logic=='&'|| cmd[i].logic=='|' || cmd[i].thread==1)
             cmd[i].nextCmd=NULL;
     }
     
@@ -316,7 +320,7 @@ int exect(Commande cmd ){
 enum Type getType2(char * partCmd){
     char opt='-' ;
     if( strcmp(partCmd,"&")==0)
-        return NEWTHREAD;
+        return NEWTHR;
     else if( strcmp(partCmd,"&&")==0 || strcmp(partCmd,"||")==0 )
         return LOGIC;
     else if(strcmp(partCmd,">")==0 || strcmp(partCmd,">>")==0 )
@@ -626,6 +630,14 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
 
 
                     break;
+                case NEWTHR :
+                    if(st!=CMDSTART){
+                        perror("ERROR UNEXCEPTED NEWTHREAD ASSIGNEMENT ");
+                        return NULL ;
+                    }
+                st = NEEDCMDNEXT;
+                listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                listCmd[nbCmd-1].thread=1;
                 
             }
         }

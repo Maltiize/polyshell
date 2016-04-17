@@ -1,13 +1,12 @@
 /*
 *   ChangeLog
-*           - Le fichier reconnait les fichiers du "premier niveau" comme des dossiers, mise à part le tout premier fichier rencontrer.
+*           - Le fichier reconnait les fichiers du "premier niveau" comme des dossiers, mise à part le tout premier fichier rencontré.
 *               Mise à part ce soucis non négligeable, CP est fonctionnel.
 *
 */
 
 
 #define _GNU_SOURCE
-
 #define debug   //  Define perso qui affiche les messages de Debug !
 
 #include <stdlib.h>
@@ -22,6 +21,7 @@
 #include <libgen.h>
 #include <getopt.h> // Pour les arguments
 #include <string.h>
+
 
 
 
@@ -42,12 +42,12 @@ int copie(char * pathSrc, char * pathDest)
     struct stat sb; //buffer
 
 
-    pathSrc = realpath(pathSrc, buffer1); //Get absolute path de la source
-
-
+    realpath(pathSrc, buffer1); //Get absolute path de la source
+    pathSrc = strdup(buffer1);
     #ifdef debug
     printf("\n ----------- \nDEBUG : Bienvenue dans copie ! :) le pathSrc = %s et le pathDest = %s \n", pathSrc, pathDest);
     #endif
+
     // debug
 
 
@@ -96,16 +96,15 @@ int copie(char * pathSrc, char * pathDest)
                 strcpy(pathSrcTmp, pathSrc);
                 strcpy(pathDestTmp, pathDest);
 
-
                 #ifdef debug
                     printf("DEBUG : WHILE \n\t pathSrc = %s \n\t pathSrcTmp = %s \n\t pathDest= %s \n\t pathDestTmp = %s \n ", pathSrc, pathSrcTmp, pathDest, pathDestTmp);
                 #endif
 
                 if((strcmp(".",dptr->d_name) != 0) && (strcmp("..",dptr->d_name) != 0)) // On ne veut pas du . et du .. !
                 {
-                    strcat(pathSrcTmp, "/");
+                    /*strcat(pathSrcTmp, "/");
                     strcat(pathSrcTmp, dptr->d_name); // On update le pathSrc
-
+                    */
 
                     if (!S_ISDIR(sb.st_mode)) // SI Fichier
                     {
@@ -172,6 +171,8 @@ int copie(char * pathSrc, char * pathDest)
         //Fermeture Propre des fichiers.
         fclose(pFileDest);
         fclose(pFileSrc);
+
+        free(buffer);
     }
 }
 

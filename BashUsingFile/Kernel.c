@@ -15,6 +15,8 @@ GroupCommande DefaultGrp={NULL,NULL,'!'};
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
 Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
 
+char * help="cd du echo pwd rm cat chmod cp ls mkdir";
+
 
 // fonction traitant les groupes logiques à l'intérieur d'une commande 
 
@@ -130,6 +132,7 @@ int aDemain(int argc,char ** argv){
 // version draft du init
 void initialize(){
     getcwd(DirLib,MAX_NAME_SZ);
+    strcat(DirLib,"/lib/");
     getcwd(CurrentDir,MAX_NAME_SZ);
 }
 
@@ -745,6 +748,10 @@ int main (int argc, char ** argv){
             break ;
 
         }
+        else if(strcmp(name,"help")==0)
+            printf("La liste des commandes %s \n",help) ;
+        else if(strcmp(name,"pwd")==0)
+            printf("%s \n",CurrentDir) ;
         else if(strcmp(name,"clear")==0)
             clear() ;
         else if(strcmp(name,"")==0)
@@ -766,9 +773,10 @@ int main (int argc, char ** argv){
         
         else{
             tokens= str_split(name, ' ');
-            if(strcmp(*(tokens),"cd")){
+            if(strcmp(*(tokens),"cd")==0){
                 chdir(*(tokens+1));
                 getcwd(CurrentDir,MAX_NAME_SZ);
+                continue ;
             }
 
             cmd=parseCmd(tokens,&nbcmd);
@@ -786,7 +794,7 @@ int main (int argc, char ** argv){
         
 
     }
-
+    
     free(name);
     return 0;
 

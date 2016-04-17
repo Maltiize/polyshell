@@ -6,19 +6,16 @@
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 12;
+int nbfunction = 17;
 int returnVal;
 char CurrentDir[MAX_NAME_SZ];
 char DirLib[MAX_NAME_SZ];
-char * help="cd du echo pwd rm cat chmod cp ls mkdir chgrp chown";
-
-
+char * help="cd du echo pwd rm cat chmod cp ls mkdir";
 
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
 Commande Default ={NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,'!',1,NULL};
-
 
 // fonction traitant les groupes logiques à l'intérieur d'une commande 
 
@@ -133,50 +130,36 @@ int aDemain(int argc,char ** argv){
 
 // version draft du init
 void initialize(){
-    
     int i ;
+    // liste des différentes fonctions de notre shell
+    Func tab[MAX_NB_FUNC]={bonjour,auRevoir,aDemain,fout,fin,MyCd,MyDu,MyEcho,MyPwd,MyRm,MyCat,MyChmod,MyCp,MyLs,MyMkdir,MyChown,MyChgrp};
     char * name[MAX_NAME_SZ];
-    char * namelib[MAX_NAME_SZ];
+    getcwd(CurrentDir,MAX_NAME_SZ);
 
-    if ((lib = dlopen("./LibFunc.so", RTLD_LAZY)) == NULL) {
-		perror("libintrouvable\n");
-	}
-	getcwd(CurrentDir,MAX_NAME_SZ);
-
-    name[0]="cd";
-    name[1]="du";
-    name[2]="echo";
-    name[3]="pwd";
-    name[4]="rm";
-    name[5]="cat";
-    name[6]="chmod";
-    name[7]="cp";
-    name[8]="ls";
-    name[9]="mkdir";
-    name[10]="chown";
-    name[11]="chgrp";
-
-    
-    namelib[0]="MyCd";
-    namelib[1]="MyDu";
-    namelib[2]="MyEcho";
-    namelib[3]="MyPwd";
-    namelib[4]="MyRm";
-    namelib[5]="MyCat";
-    namelib[6]="MyChmod";
-    namelib[7]="MyCp";
-    namelib[8]="MyLs";
-    namelib[9]="MyMkdir";
-    namelib[10]="MyChown";
-    namelib[11]="MyChgrp";
-
+    // et les noms de commandes attribuées aux fonctions
+    name[0]="bonjour";
+    name[1]="auRevoir";
+    name[2]="aDemain";
+    name[3]="fout";
+    name[4]="fin";
+    name[5]="cd";
+    name[6]="du";
+    name[7]="echo";
+    name[8]="pwd";
+    name[9]="rm";
+    name[10]="cat";
+    name[11]="chmod";
+    name[12]="cp";
+    name[13]="ls";
+    name[14]="mkdir";
+    name[15]="chown";
+    name[16]="chgrp";
     
     
+  
     for(i=0;i<nbfunction;i++){
         listeFu[i].name=name[i];
-        if ((listeFu[i].pfunc = (Func) dlsym(lib,namelib[i])) == NULL) 
-            fprintf(stderr, "ERROR CAN'T LOAD %s \n", listeFu[i].name);
-        
+        listeFu[i].pfunc=tab[i];
     }
 }
 
@@ -497,7 +480,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     {
         if(lclFunction(*(tokens))==0){
             
-            perror("ERROR CMD INCONNUE lalala \n");
+            perror("ERROR CMD INCONNUE \n");
             return NULL;
 
         }
@@ -706,8 +689,8 @@ int main (int argc, char ** argv){
         }
 
 
-	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
-   while(1){
+	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter  \"help\" pour la liste des cmds\n");
+    while(1){
         prompt(currentDir,hostName);
         /* Get the command, with size limit. */
         fgets (name, MAX_NAME_SZ, stdin);
@@ -767,7 +750,6 @@ int main (int argc, char ** argv){
         
 
     }
-
 
     free(name);
     return 0;

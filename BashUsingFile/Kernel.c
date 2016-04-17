@@ -107,7 +107,7 @@ int fin(int argc,char ** argv)
     char result[240];
    
     fgets(result,240,stdin);
-    strcat(result," et les putes\n");
+    strcat(result," et le poulet\n");
     printf("%s\n",result);
     return 0;
 }
@@ -414,7 +414,7 @@ int chainExec(Commande cmd){
        return 1;
      }
  
-   /* create the child */
+    /* creation du prossecus fils */
    int pid;
    if ((pid = fork()) < 0)
      {
@@ -424,30 +424,30 @@ int chainExec(Commande cmd){
      
     // dans le cas d'une sous commande
    if (pid == 0)
-     {
-        close(pfd[0]); /* close the unused read side */
-        dup2(pfd[1], 1); /* connect the write side with stdout */
-        close(pfd[1]); /* close the write side */
-       exect(cmd);
+     {  /*enfant*/
+        close(pfd[0]); /* on ferme le coté lecture inutilisé */
+        dup2(pfd[1], 1); /* on connect le coté ecriture avec stdout */
+        close(pfd[1]); /* on ferme le coté écriture */
+        exect(cmd);
         
 
-       //close(pfd);
-       exit(10);     
+        
+        exit(10);     
        
      }
    else
      { /* parent */
-        close(pfd[1]); 
-        dup2(pfd[0], 0);
-        close(pfd[0]); /* close the write side */
+        close(pfd[1]); /* on ferme le coté écriture inutilisé */
+        dup2(pfd[0], 0);/* on connect le coté lecture avec stdin */
+        close(pfd[0]); /* on ferme le lecture */
         if ((pidt = wait(&status)) == -1)
-                                     /* Wait for child process.      */                                 
+            /* on attent la fermeture du processus enfant*/                                 
            perror("wait error");
         else {
 
-           //close(pfd[1]); /* close the unused write side */
           
-           /* execute the process */
+          
+           /*on execute la commande */
            chainExec(cmd.nextCmd[0]);
            
            
@@ -455,7 +455,7 @@ int chainExec(Commande cmd){
         }
          
      }
-    //close(pfd);
+    
    return 0;
 }
     

@@ -6,14 +6,10 @@
 
 // variable globale stockant les différentes fonctions
 Function listeFu[MAX_NB_FUNC];
-int nbfunction = 12;
+int nbfunction = 10;
 int returnVal;
 char CurrentDir[MAX_NAME_SZ];
 char DirLib[MAX_NAME_SZ];
-char * help="cd du echo pwd rm cat chmod cp ls mkdir chgrp chown";
-
-
-
 
 GroupCommande DefaultGrp={NULL,NULL,'!'};
 // Structure par defaut de Commande afin d'initialiser plus facilement les instances
@@ -30,7 +26,7 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
     
     // on compte le nombre de groupe logique
     while(tmp!=NULL){
-        if(tmp->logic!='!')
+        if(tmp->logic!='!'|| tmp->thread==1)
             nbgroup++;
         tmp = tmp->nextCmd;
     }
@@ -58,6 +54,10 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
             ret[i].logic=tmp->logic;
             i++;
         }
+        if(tmp->thread==1){
+             // si on rencontre un nouveau thread on passe sur un autre groupe
+            i++;
+        }
         
         // on passeà la commade suivante 
         tmp = tmp->nextCmd;
@@ -66,7 +66,7 @@ GroupCommande * processingGroup(Commande * cmd,int nbCmd,int * retnb){
     
     // on supprime les liens inutiles entre les commandes 
     for(i=0;i<nbCmd;i++){
-        if(cmd[i].logic=='&'|| cmd[i].logic=='|')
+        if(cmd[i].logic=='&'|| cmd[i].logic=='|' || cmd[i].thread==1)
             cmd[i].nextCmd=NULL;
     }
     
@@ -133,89 +133,117 @@ int aDemain(int argc,char ** argv){
 
 // version draft du init
 void initialize(){
-    
-    int i ;
-    char * name[MAX_NAME_SZ];
-    char * namelib[MAX_NAME_SZ];
+    getcwd(DirLib,MAX_NAME_SZ);
+    getcwd(CurrentDir,MAX_NAME_SZ);
+}
 
-    if ((lib = dlopen("./lib/LibFunc.so", RTLD_LAZY)) == NULL) {
-		perror("libintrouvable\n");
-	}
-	getcwd(CurrentDir,MAX_NAME_SZ);
-
-    name[0]="cd";
-    name[1]="du";
-    name[2]="echo";
-    name[3]="pwd";
-    name[4]="rm";
-    name[5]="cat";
-    name[6]="chmod";
-    name[7]="cp";
-    name[8]="ls";
-    name[9]="mkdir";
-    name[10]="chown";
-    name[11]="chgrp";
-
-    
-    namelib[0]="MyCd";
-    namelib[1]="MyDu";
-    namelib[2]="MyEcho";
-    namelib[3]="MyPwd";
-    namelib[4]="MyRm";
-    namelib[5]="MyCat";
-    namelib[6]="MyChmod";
-    namelib[7]="MyCp";
-    namelib[8]="MyLs";
-    namelib[9]="MyMkdir";
-    namelib[10]="MyChown";
-    namelib[11]="MyChgrp";
-
-    
-    
-    for(i=0;i<nbfunction;i++){
-        listeFu[i].name=name[i];
-        if ((listeFu[i].pfunc = (Func) dlsym(lib,namelib[i])) == NULL) 
-            fprintf(stderr, "ERROR CAN'T LOAD %s \n", listeFu[i].name);
-        
+char * printdir(char *dir, char * file)
+{
+    DIR *dp;
+    char * ret = malloc(sizeof(char)*1024);
+    struct dirent *entry;
+    struct stat statbuf;
+    if((dp = opendir(dir)) == NULL) {
+        fprintf(stderr,"cannot open directory: %s\n", dir);
+        return NULL;
     }
+    chdir(dir);
+    while((entry = readdir(dp)) != NULL) {
+        lstat(entry->d_name,&statbuf);
+        if(S_ISDIR(statbuf.st_mode)) {
+            /* Found a directory, but ignore . and .. */
+            if(strcmp(".",entry->d_name) == 0 ||
+                strcmp("..",entry->d_name) == 0)
+                continue;
+            //printf("%*s%s/\n",depth,"",entry->d_name);
+            /* Recurse at a new indent level */
+            ret=printdir(entry->d_name,file);
+            if(ret!=NULL){
+                chdir("..");
+                closedir(dp);
+                return ret;
+            }
+            
+        }
+        else {
+            if(strcmp(file,entry->d_name) == 0){
+                getcwd(ret,1024);
+                strcat(ret,"/");
+                //strcat(ret,file);
+                return ret;
+            }
+        }
+    }
+    chdir("..");
+    closedir(dp);
+    return NULL;
 }
 
 // cherche une instance de Function à partir d'une chaine de caractères
 // renvois NULL si rien n'est trouvé
-Function getFunc(char * cmd){
-    int i ;
-   for(i=0;i<nbfunction;i++){
-        //printf("get func %s%s\n",listeFu[i].name,cmd);
-        if(strcmp(listeFu[i].name,cmd)==0)
-            return listeFu[i];
-    }
-   
-    Function ret ;
-    ret.name =NULL;
-    ret.pfunc=NULL ;
-    return ret ;
-    
-}
+
 
 int lclFunction(char * cmd){
-    return !(getFunc(cmd).name == NULL) ;
+    int vide;
+    return !(getFunc(cmd,&vide) == NULL) ;
 
+}
+
+char * getFunc(char * cmd,int * System){
+    int i ;
+    char * path =NULL;
+    char ** token ;
+    char choice;
+    path=printdir(DirLib,cmd);
+    if(path!=NULL){
+        *(System)=1;
+        chdir(CurrentDir);
+        return path;
+    }
+    path=printdir(CurrentDir,cmd);
+    if(path!=NULL){
+        *(System)=1;
+        chdir(CurrentDir);
+        return path;
+    }
+    else{
+        printf("Fonction %s inconnue dans le local recherche dans PATH ? y/n\n", cmd);
+        choice=getc(stdin);
+        if(choice=='n')
+            return NULL;
+        path=getenv("PATH");
+        token=str_split(path,':');
+        for (i = 0; *(token + i); i++){
+            path=printdir(*(token+i),cmd);
+            if(path!=NULL){
+                *(System)=0;
+                chdir(CurrentDir);
+                return path ;
+            }
+            
+        }
+        
+    }
+   
+   
+    return NULL ;
+    
 }
 
 // remplie un tableau de structure Commande avec les pointeurs de fonctions 
 // prorata le nom de function stockée dans les Commande 
 int  fileListeFun(Commande *  liCmd , int nbCmd){
+     //getcwd(CurrentDir,255);
+    char * tmp = malloc(sizeof(char)*1024);
+    int test =-1;
     int i;
-    Function token ;
-
     for (i=0;i<nbCmd;i++){
-        token = getFunc(liCmd[i].name);
-
-        if(token.name==NULL)
+        tmp = getFunc(liCmd[i].name,&test);
+        if(tmp==NULL)
             return 1;
-        liCmd[i].pfunc=token.pfunc;
+        liCmd[i].path=tmp;
+        liCmd[i].System=test;
     }
-
     return 0 ;
     
 }
@@ -304,10 +332,16 @@ int exect(Commande cmd ){
         }
         
         //on separe les options en sous chaines 
-        char ** option=str_split(cmd.option,' ');
         
         // on appelle la fonction
-        val=(*cmd.pfunc)(cmd.nboption,option);   
+        if(cmd.System==0)
+            val=system(cmd.option);
+        else{
+            char ** option=str_split(cmd.option,' ');
+            strcat(cmd.path,cmd.name);
+            execv(cmd.path,option); 
+        }
+            
 
         // on ferme le fichier si il a été ouvert
         if(file!=-1)
@@ -330,10 +364,10 @@ int exect(Commande cmd ){
     
 
 // Fonction particpant à l'analyse de l'automate
-enum Type getType2(char * partCmd){
+enum Type getType2(char * partCmd,int op){
     char opt='-' ;
     if( strcmp(partCmd,"&")==0)
-        return NEWTHREAD;
+        return NEWTHR;
     else if( strcmp(partCmd,"&&")==0 || strcmp(partCmd,"||")==0 )
         return LOGIC;
     else if(strcmp(partCmd,">")==0 || strcmp(partCmd,">>")==0 )
@@ -350,8 +384,7 @@ enum Type getType2(char * partCmd){
         return COMPLEMENTCMD;
 
     else{
-        if(lclFunction(partCmd)==1){
-
+        if(  op ==1 && lclFunction(partCmd)==1){
             return CMD ;}
         else
             return UNDEFINED;
@@ -423,7 +456,7 @@ int chainExec(Commande cmd){
         }
          
      }
-
+    
    return 0;
 }
     
@@ -489,6 +522,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     int nbCmd=0;
     enum State st = CMDSTART;
     char * strTmp;
+    int op =0;
     strTmp=strdup("");
     //printf("ok\n");
     for(i=0;i<MAX_NB_FUNC;i++)
@@ -497,7 +531,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
     {
         if(lclFunction(*(tokens))==0){
             
-            perror("ERROR CMD INCONNUE lalala \n");
+            perror("ERROR CMD INCONNUE\n");
             return NULL;
 
         }
@@ -505,16 +539,12 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
         listCmd[nbCmd].name = *(tokens);
         listCmd[nbCmd].option = strdup(*(tokens));
         listCmd[nbCmd].nboption=1;
-
-
         nbCmd++;
-        
-
         for (i = 1; *(tokens + i); i++)
         {
            //printf("cmd is %s\n",*(tokens + i));
 
-            switch (getType2(*(tokens + i))){
+            switch (getType2(*(tokens + i),op)){
 
                 case CMD:
 
@@ -525,10 +555,8 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     listCmd[nbCmd].name = *(tokens + i);
                     listCmd[nbCmd].option = strdup(*(tokens));
                     listCmd[nbCmd].nboption=1;
-
-                    //printf("option %s \n",listCmd[nbCmd-1].option);
-
                     nbCmd++;
+                    op=0;
                     st=CMDSTART ;
                     
                     break;
@@ -610,7 +638,7 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     }
                     listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
                     listCmd[nbCmd-1].logic='!';
-
+                    op=0;
                     st=NEEDCMDNEXT;
                     break;
    
@@ -640,6 +668,17 @@ Commande * parseCmd(char ** tokens ,int * retnbcmd)
                     listCmd[nbCmd-1].logic='&';
                 else
                     listCmd[nbCmd-1].logic='|';
+
+
+                    break;
+                case NEWTHR :
+                    if(st!=CMDSTART){
+                        perror("ERROR UNEXCEPTED NEWTHREAD ASSIGNEMENT ");
+                        return NULL ;
+                    }
+                st = NEEDCMDNEXT;
+                listCmd[nbCmd-1].nextCmd=&listCmd[nbCmd];
+                listCmd[nbCmd-1].thread=1;
 
 
                     break;
@@ -699,7 +738,7 @@ int main (int argc, char ** argv){
     //tmpgroup=NULL;
     initialize();
     int pidServ =-1 ;
-
+    
      if (name == NULL) {
             printf ("No memory\n");
             return 1;
@@ -707,7 +746,7 @@ int main (int argc, char ** argv){
 
 
 	printf("Interpreteur de commande v1.0 \nTaper \"quit\" pour quitter\n");
-   while(1){
+    while(1){
         prompt(currentDir,hostName);
         /* Get the command, with size limit. */
         fgets (name, MAX_NAME_SZ, stdin);
@@ -721,10 +760,6 @@ int main (int argc, char ** argv){
             break ;
 
         }
-        else if(strcmp(name,"help")==0)
-            printf("La liste des commandes %s \n",help) ;
-        else if(strcmp(name,"pwd")==0)
-            printf("%s \n",CurrentDir) ;
         else if(strcmp(name,"clear")==0)
             clear() ;
         else if(strcmp(name,"")==0)
@@ -746,10 +781,9 @@ int main (int argc, char ** argv){
         
         else{
             tokens= str_split(name, ' ');
-            if(strcmp(*(tokens),"cd")==0){
+            if(strcmp(*(tokens),"cd")){
                 chdir(*(tokens+1));
                 getcwd(CurrentDir,MAX_NAME_SZ);
-                continue ;
             }
 
             cmd=parseCmd(tokens,&nbcmd);
@@ -767,7 +801,6 @@ int main (int argc, char ** argv){
         
 
     }
-
 
     free(name);
     return 0;

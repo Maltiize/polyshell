@@ -11,7 +11,7 @@
 #include <getopt.h> // Pour les arguments
 #include <pwd.h>  // Pour la fonction getpwnam qui change le nom;
 
-int myChown(int argc, char * argv[])
+int MyChown(int argc, char * argv[])
 {
    // Déclaration variable pour arguments
     char opt; // Pour stocker les options passé en paramètre 1 à 1
@@ -161,11 +161,5 @@ int myChown(int argc, char * argv[])
         }
 
     printf("Les propriétaires du fichier \"%s\" ont correctement été changés.\n", path);
-    return 0;
-}
-
-int main(int argc, char * argv[])
-{
-    myChown(argc, argv);
     return 0;
 }

@@ -121,7 +121,7 @@ int MyRm(int argc, char *argv[])
         printf("Suppresion du dossier effectué ! \n");
     }
     else{  //Sinon il n'y a pas d'option alors on suprime le fic
-		for( i=1;i<argc;i++)
+		for(i=1;i<argc;i++)
 		{
 		    remove(argv[i]);
 		}
@@ -132,3 +132,9 @@ int MyRm(int argc, char *argv[])
 	return 0;
 }
 
+
+int main(int argc, char *argv[])
+{
+    MyRm(argc, argv);
+    return 0;
+}

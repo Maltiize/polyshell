@@ -7,11 +7,11 @@ int MyEcho(int argc, char *argv[])
 {
     char opt; // Pour stocker les options passé en paramètre 1 à 1
     char * options = "hna" ; // Les options disponibles
-
+    int i ;
     int help = 0; //option h
     int n = 0; // option n : Enleve le retour chariot (ENTRÉE)
     int a = 0; //option e : retour chariot a chaque mot. Option non présente dans le echo de base.
-    int i ;
+
     // Récupérer les options
     while ((opt = getopt (argc, argv, options)) != -1)
     {
@@ -112,3 +112,8 @@ int MyEcho(int argc, char *argv[])
 	return 0;
 }
 
+int main(int argc, char *argv[])
+{
+    MyEcho(argc, argv);
+	return 0;
+}

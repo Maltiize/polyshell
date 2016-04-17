@@ -56,3 +56,8 @@ int MyPwd(int argc, char *argv[])
             return 1;
         }
 }
+
+int main(int argc, char *argv[])
+{
+    MyPwd(argc, argv);
+}

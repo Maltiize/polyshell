@@ -7,7 +7,6 @@
 #include <linux/limits.h>   //path
 #include <stdio.h>  //printf
 
-#include "MyCd.h"
 
 
 
